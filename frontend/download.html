@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download File - sdbx</title>
+    <meta name="description" content="Download your securely shared file">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>🔒 sdbx</h1>
+        <p class="tagline">Secure file download</p>
+    </header>
+
+    <main>
+        <section id="loading-section" class="card">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Checking file availability...</p>
+            </div>
+        </section>
+
+        <section id="available-section" class="card" style="display: none;">
+            <h2>File Ready to Download</h2>
+
+            <div class="file-details">
+                <p><strong>File Size:</strong> <span id="file-size"></span></p>
+                <p><strong>Expires:</strong> <span id="expires-in"></span></p>
+            </div>
+
+            <div class="warning-box">
+                <p><strong>⚠️ Warning:</strong></p>
+                <ul>
+                    <li>This file can only be downloaded <strong>ONCE</strong></li>
+                    <li>After clicking download, the link becomes invalid forever</li>
+                    <li>Make sure you're ready before proceeding</li>
+                </ul>
+            </div>
+
+            <button id="download-btn" class="btn btn-primary">
+                Download Now
+            </button>
+
+            <div id="download-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <p id="progress-text" class="text-center text-muted"></p>
+            </div>
+
+            <p class="text-center text-muted">
+                <a href="#" id="report-abuse">Report abuse</a>
+            </p>
+        </section>
+
+        <section id="error-section" class="card" style="display: none;">
+            <div class="alert alert-error">
+                <h2>Unable to Download</h2>
+                <p id="error-message"></p>
+            </div>
+
+            <a href="index.html" class="btn btn-outline">Share a New File</a>
+        </section>
+
+        <section id="success-section" class="card" style="display: none;">
+            <div class="alert alert-success">
+                <h2>✓ Download Complete</h2>
+                <p>Your file has been decrypted and saved.</p>
+                <p class="text-muted">This link is now invalid and the file has been deleted from our servers.</p>
+            </div>
+
+            <a href="index.html" class="btn btn-primary">Share Another File</a>
+        </section>
+
+        <section class="info-section">
+            <h3>About sdbx</h3>
+            <p>
+                sdbx uses end-to-end encryption to protect your files.
+                Your encryption key never leaves your browser and the server never has access to your unencrypted files.
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 sdbx - Built with privacy in mind</p>
+        <p>
+            <a href="about.html">About</a> |
+            <a href="privacy.html">Privacy</a> |
+            <a href="https://github.com/yourusername/sdbx">Source Code</a>
+        </p>
+    </footer>
+
+    <script src="js/crypto.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/download.js"></script>
+</body>
+</html>

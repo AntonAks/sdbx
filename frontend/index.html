@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sdbx - Zero-Knowledge File Sharing</title>
+    <meta name="description" content="Share files securely with end-to-end encryption and one-time downloads">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>🔒 sdbx</h1>
+        <p class="tagline">Zero-knowledge file sharing with one-time downloads</p>
+    </header>
+
+    <main>
+        <section id="upload-section" class="card">
+            <h2>Share a File</h2>
+
+            <div id="drop-zone" class="drop-zone">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p>Drag & drop a file here</p>
+                <p class="text-muted">or click to browse</p>
+                <input type="file" id="file-input" accept="*/*" hidden>
+            </div>
+
+            <div id="file-info" class="file-info" style="display: none;">
+                <p><strong>Selected:</strong> <span id="file-name"></span></p>
+                <p><strong>Size:</strong> <span id="file-size"></span></p>
+            </div>
+
+            <div class="ttl-selector">
+                <label>Delete after:</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="ttl" value="1h" checked>
+                        <span>1 hour</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="ttl" value="12h">
+                        <span>12 hours</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="ttl" value="24h">
+                        <span>24 hours</span>
+                    </label>
+                </div>
+            </div>
+
+            <button id="upload-btn" class="btn btn-primary" disabled>
+                Encrypt & Upload
+            </button>
+
+            <div id="progress-section" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <p id="progress-text" class="text-center text-muted"></p>
+            </div>
+
+            <div id="result-section" class="result-section" style="display: none;">
+                <div class="alert alert-success">
+                    <p><strong>✓ File uploaded successfully!</strong></p>
+                    <p class="text-muted">Share this link (it works only once):</p>
+                </div>
+
+                <div class="url-box">
+                    <input type="text" id="share-url" readonly>
+                    <button id="copy-btn" class="btn btn-secondary">Copy</button>
+                </div>
+
+                <div class="warning-box">
+                    <p><strong>⚠️ Important:</strong></p>
+                    <ul>
+                        <li>This link can only be used <strong>ONCE</strong></li>
+                        <li>File will be deleted after download or expiration</li>
+                        <li>Save the link now - you won't see it again</li>
+                    </ul>
+                </div>
+
+                <button id="new-upload-btn" class="btn btn-outline">Upload Another File</button>
+            </div>
+        </section>
+
+        <section class="info-section">
+            <h3>How sdbx works</h3>
+            <div class="features">
+                <div class="feature">
+                    <h4>🔐 Client-side Encryption</h4>
+                    <p>Your file is encrypted in your browser before upload using AES-256-GCM</p>
+                </div>
+                <div class="feature">
+                    <h4>🔑 Zero-Knowledge</h4>
+                    <p>The encryption key stays in the URL fragment and never reaches our servers</p>
+                </div>
+                <div class="feature">
+                    <h4>⏱️ One-Time Download</h4>
+                    <p>Each file can only be downloaded once, then it's automatically deleted</p>
+                </div>
+                <div class="feature">
+                    <h4>🚫 No Tracking</h4>
+                    <p>No accounts, no email, no cookies, no analytics</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 sdbx - Built with privacy in mind</p>
+        <p>
+            <a href="about.html">About</a> |
+            <a href="privacy.html">Privacy</a> |
+            <a href="https://github.com/yourusername/sdbx">Source Code</a>
+        </p>
+    </footer>
+
+    <script src="js/crypto.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/upload.js"></script>
+</body>
+</html>

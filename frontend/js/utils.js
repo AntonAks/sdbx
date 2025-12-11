@@ -1,0 +1,122 @@
+/**
+ * Utility functions for sdbx
+ */
+
+'use strict';
+
+const Utils = (function() {
+    /**
+     * Format bytes to human-readable size
+     * @param {number} bytes - File size in bytes
+     * @returns {string} Formatted size (e.g., "1.5 MB")
+     */
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    /**
+     * Format seconds to human-readable time
+     * @param {number} seconds - Time in seconds
+     * @returns {string} Formatted time (e.g., "2 hours 30 minutes")
+     */
+    function formatTimeRemaining(seconds) {
+        if (seconds <= 0) return 'Expired';
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+
+        if (hours > 0) {
+            return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        }
+
+        return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
+
+    /**
+     * Copy text to clipboard
+     * @param {string} text - Text to copy
+     * @returns {Promise<boolean>} Success status
+     */
+    async function copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            console.error('Failed to copy:', err);
+            return false;
+        }
+    }
+
+    /**
+     * Show error message
+     * @param {string} message - Error message to display
+     */
+    function showError(message) {
+        // TODO: Implement toast/notification system
+        alert(`Error: ${message}`);
+    }
+
+    /**
+     * Show success message
+     * @param {string} message - Success message to display
+     */
+    function showSuccess(message) {
+        // TODO: Implement toast/notification system
+        alert(message);
+    }
+
+    /**
+     * Get current timestamp in seconds
+     * @returns {number} Unix timestamp
+     */
+    function getCurrentTimestamp() {
+        return Math.floor(Date.now() / 1000);
+    }
+
+    /**
+     * Validate file size
+     * @param {number} size - File size in bytes
+     * @param {number} maxSize - Maximum allowed size in bytes
+     * @returns {boolean} Whether file size is valid
+     */
+    function validateFileSize(size, maxSize = 104857600) {
+        return size > 0 && size <= maxSize;
+    }
+
+    /**
+     * Get file ID from URL path
+     * @returns {string|null} File ID or null
+     */
+    function getFileIdFromUrl() {
+        const path = window.location.pathname;
+        const match = path.match(/\/f\/([a-f0-9-]+)/);
+        return match ? match[1] : null;
+    }
+
+    /**
+     * Get encryption key from URL fragment
+     * @returns {string|null} Base64-encoded key or null
+     */
+    function getKeyFromFragment() {
+        const fragment = window.location.hash;
+        return fragment.startsWith('#') ? fragment.substring(1) : null;
+    }
+
+    return {
+        formatFileSize,
+        formatTimeRemaining,
+        copyToClipboard,
+        showError,
+        showSuccess,
+        getCurrentTimestamp,
+        validateFileSize,
+        getFileIdFromUrl,
+        getKeyFromFragment,
+    };
+})();

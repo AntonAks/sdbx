@@ -1,0 +1,83 @@
+"""Lambda function: Cleanup expired files."""
+
+import json
+import logging
+import os
+import time
+from typing import Any
+
+import boto3
+
+from shared.dynamo import delete_file_record, get_table
+from shared.s3 import delete_file
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Environment variables
+BUCKET_NAME = os.environ.get("BUCKET_NAME")
+TABLE_NAME = os.environ.get("TABLE_NAME")
+
+
+def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+    """
+    Cleanup expired and downloaded files.
+
+    Runs on schedule (e.g., every hour via EventBridge).
+    """
+    try:
+        deleted_count = 0
+        error_count = 0
+        current_time = int(time.time())
+
+        # Scan for expired files
+        # Note: In production, consider using a GSI on expires_at for efficiency
+        table = get_table(TABLE_NAME)
+        response = table.scan()
+
+        for item in response.get("Items", []):
+            file_id = item["file_id"]
+            s3_key = item["s3_key"]
+            expires_at = item.get("expires_at", 0)
+            downloaded = item.get("downloaded", False)
+
+            # Delete if expired or already downloaded
+            should_delete = expires_at <= current_time or downloaded
+
+            if should_delete:
+                try:
+                    # Delete from S3
+                    delete_file(BUCKET_NAME, s3_key)
+
+                    # Delete from DynamoDB
+                    delete_file_record(TABLE_NAME, file_id)
+
+                    deleted_count += 1
+                    logger.info(f"Cleaned up file: {file_id}")
+
+                except Exception as e:
+                    error_count += 1
+                    logger.error(f"Error cleaning up {file_id}: {e}")
+
+        logger.info(
+            json.dumps({
+                "action": "cleanup_completed",
+                "deleted": deleted_count,
+                "errors": error_count,
+            })
+        )
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "deleted": deleted_count,
+                "errors": error_count,
+            }),
+        }
+
+    except Exception as e:
+        logger.exception("Unexpected error in cleanup")
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": "Internal server error"}),
+        }
