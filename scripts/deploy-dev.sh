@@ -22,7 +22,10 @@ fi
 
 # Initialize Terraform
 echo "🔧 Initializing Terraform..."
-terraform init
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BACKEND_BUCKET="sdbx-terraform-state-${ACCOUNT_ID}"
+echo "  Backend bucket: ${BACKEND_BUCKET}"
+terraform init -backend-config="bucket=${BACKEND_BUCKET}"
 echo ""
 
 # Validate configuration

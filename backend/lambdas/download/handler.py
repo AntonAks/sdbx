@@ -1,6 +1,5 @@
 """Lambda function: Download file."""
 
-import json
 import logging
 import os
 from typing import Any
@@ -12,6 +11,7 @@ from shared.exceptions import (
     FileNotFoundError,
     ValidationError,
 )
+from shared.json_helper import dumps as json_dumps
 from shared.s3 import generate_download_url
 from shared.validation import validate_file_id
 
@@ -83,7 +83,7 @@ def _success_response(data: dict) -> dict[str, Any]:
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
         },
-        "body": json.dumps(data),
+        "body": json_dumps(data),
     }
 
 
@@ -95,5 +95,5 @@ def _error_response(status: int, message: str) -> dict[str, Any]:
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
         },
-        "body": json.dumps({"error": message}),
+        "body": json_dumps({"error": message}),
     }

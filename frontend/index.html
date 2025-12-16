@@ -110,7 +110,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2024 sdbx - Built with privacy in mind</p>
+        <p>&copy; <span id="year"></span> sdbx - Built with privacy in mind</p>
         <p>
             <a href="about.html">About</a> |
             <a href="privacy.html">Privacy</a> |
@@ -121,5 +121,9 @@
     <script src="js/crypto.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/upload.js"></script>
+    <script>
+        // Set current year dynamically
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
 </body>
 </html>

@@ -90,13 +90,18 @@ const Utils = (function() {
     }
 
     /**
-     * Get file ID from URL path
+     * Get file ID from URL fragment
      * @returns {string|null} File ID or null
      */
     function getFileIdFromUrl() {
-        const path = window.location.pathname;
-        const match = path.match(/\/f\/([a-f0-9-]+)/);
-        return match ? match[1] : null;
+        const fragment = window.location.hash;
+        if (!fragment.startsWith('#')) return null;
+
+        // Format: #<file_id>#<key>
+        // Decode URI component in case # is encoded as %23
+        const decoded = decodeURIComponent(fragment.substring(1));
+        const parts = decoded.split('#');
+        return parts[0] || null;
     }
 
     /**
@@ -105,7 +110,28 @@ const Utils = (function() {
      */
     function getKeyFromFragment() {
         const fragment = window.location.hash;
-        return fragment.startsWith('#') ? fragment.substring(1) : null;
+        if (!fragment.startsWith('#')) return null;
+
+        // Format: #<file_id>#<key>#<filename>
+        // Decode URI component in case # is encoded as %23
+        const decoded = decodeURIComponent(fragment.substring(1));
+        const parts = decoded.split('#');
+        return parts[1] || null;
+    }
+
+    /**
+     * Get filename from URL fragment
+     * @returns {string|null} Original filename or null
+     */
+    function getFileNameFromFragment() {
+        const fragment = window.location.hash;
+        if (!fragment.startsWith('#')) return null;
+
+        // Format: #<file_id>#<key>#<filename>
+        // Decode URI component in case # is encoded as %23
+        const decoded = decodeURIComponent(fragment.substring(1));
+        const parts = decoded.split('#');
+        return parts[2] || null;
     }
 
     return {
@@ -118,5 +144,6 @@ const Utils = (function() {
         validateFileSize,
         getFileIdFromUrl,
         getKeyFromFragment,
+        getFileNameFromFragment,
     };
 })();

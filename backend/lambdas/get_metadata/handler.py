@@ -1,6 +1,5 @@
 """Lambda function: Get file metadata."""
 
-import json
 import logging
 import os
 import time
@@ -8,6 +7,7 @@ from typing import Any
 
 from shared.dynamo import get_file_record
 from shared.exceptions import ValidationError
+from shared.json_helper import dumps as json_dumps
 from shared.validation import validate_file_id
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ def _success_response(data: dict) -> dict[str, Any]:
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
         },
-        "body": json.dumps(data),
+        "body": json_dumps(data),
     }
 
 
@@ -78,5 +78,5 @@ def _error_response(status: int, message: str) -> dict[str, Any]:
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
         },
-        "body": json.dumps({"error": message}),
+        "body": json_dumps({"error": message}),
     }

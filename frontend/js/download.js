@@ -6,7 +6,7 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'https://api.example.com/v1', // TODO: Replace with actual API URL
+    API_BASE_URL: 'https://laeg1n0efh.execute-api.eu-central-1.amazonaws.com/dev',
 };
 
 // DOM elements
@@ -28,6 +28,7 @@ const elements = {
 // State
 let fileId = null;
 let encryptionKey = null;
+let fileName = null;
 let countdownInterval = null;
 
 // Initialize
@@ -38,9 +39,12 @@ init();
  */
 async function init() {
     try {
-        // Get file ID and key from URL
+        // Get file ID, key, and filename from URL
         fileId = Utils.getFileIdFromUrl();
         const keyBase64 = Utils.getKeyFromFragment();
+        fileName = Utils.getFileNameFromFragment();
+
+        console.log('Parsed from URL:', { fileId, keyBase64: keyBase64?.substring(0, 10) + '...', fileName });
 
         if (!fileId || !keyBase64) {
             showError('Invalid download link');
@@ -167,7 +171,10 @@ async function handleDownload() {
 
         // Save file
         updateProgress(90, 'Saving file...');
-        saveFile(decryptedData, 'downloaded-file'); // TODO: Get original filename
+        // Use stored filename or fallback to generic name
+        const downloadFileName = fileName || 'downloaded-file';
+        console.log('Saving file as:', downloadFileName);
+        saveFile(decryptedData, downloadFileName);
 
         // Show success
         updateProgress(100, 'Download complete!');

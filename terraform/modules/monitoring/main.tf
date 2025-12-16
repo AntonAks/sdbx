@@ -220,8 +220,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         properties = {
           metrics = [
             for func in var.lambda_functions : [
-              "AWS/Lambda", "Errors", { stat = "Sum", label = func },
-              { FunctionName = func }
+              "AWS/Lambda", "Errors", "FunctionName", func, { stat = "Sum", label = func }
             ]
           ]
           period = 300
@@ -236,8 +235,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         properties = {
           metrics = [
             for func in var.lambda_functions : [
-              "AWS/Lambda", "Duration", { stat = "Average", label = func },
-              { FunctionName = func }
+              "AWS/Lambda", "Duration", "FunctionName", func, { stat = "Average", label = func }
             ]
           ]
           period = 300

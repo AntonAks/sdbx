@@ -24,6 +24,11 @@ variable "static_bucket_arn" {
   type        = string
 }
 
+variable "static_bucket_regional_domain_name" {
+  description = "S3 bucket regional domain name for static files"
+  type        = string
+}
+
 variable "api_domain" {
   description = "API Gateway domain"
   type        = string

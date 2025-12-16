@@ -9,7 +9,8 @@ set -e
 # State files are separated by key: environments/dev/terraform.tfstate and environments/prod/terraform.tfstate
 
 REGION="eu-central-1"
-BUCKET_NAME="sdbx-terraform-state"
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BUCKET_NAME="sdbx-terraform-state-${ACCOUNT_ID}"
 DYNAMODB_TABLE="sdbx-terraform-locks"
 
 echo "🚀 Bootstrapping Terraform backend..."
@@ -23,8 +24,8 @@ if ! aws sts get-caller-identity &> /dev/null; then
 fi
 
 echo "✓ AWS credentials found"
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 echo "  Account ID: $ACCOUNT_ID"
+echo "  Bucket: $BUCKET_NAME"
 echo ""
 
 # Create S3 bucket

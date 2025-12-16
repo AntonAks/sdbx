@@ -6,7 +6,7 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'https://api.example.com/v1', // TODO: Replace with actual API URL
+    API_BASE_URL: 'https://laeg1n0efh.execute-api.eu-central-1.amazonaws.com/dev',
     MAX_FILE_SIZE: 100 * 1024 * 1024, // 100 MB
 };
 
@@ -131,7 +131,7 @@ async function handleUpload() {
         // Initialize upload
         updateProgress(50, 'Initializing upload...');
         const ttl = getSelectedTTL();
-        const uploadData = await initializeUpload(selectedFile.size, ttl);
+        const uploadData = await initializeUpload(selectedFile.size, selectedFile.name, ttl);
 
         // Upload to S3
         updateProgress(60, 'Uploading encrypted file...');
@@ -140,7 +140,9 @@ async function handleUpload() {
         // Generate share URL
         updateProgress(90, 'Generating share link...');
         const keyBase64 = await CryptoModule.keyToBase64(key);
-        const shareUrl = `${window.location.origin}/f/${uploadData.file_id}#${keyBase64}`;
+        // Encode filename in URL so it can be extracted on download page
+        const encodedFileName = encodeURIComponent(selectedFile.name);
+        const shareUrl = `${window.location.origin}/download.html#${uploadData.file_id}#${keyBase64}#${encodedFileName}`;
 
         // Show result
         updateProgress(100, 'Upload complete!');
@@ -156,7 +158,7 @@ async function handleUpload() {
 /**
  * Initialize upload with API
  */
-async function initializeUpload(fileSize, ttl) {
+async function initializeUpload(fileSize, fileName, ttl) {
     const response = await fetch(`${CONFIG.API_BASE_URL}/upload/init`, {
         method: 'POST',
         headers: {

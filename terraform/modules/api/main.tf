@@ -91,7 +91,7 @@ module "lambda_upload_init" {
   runtime       = var.lambda_runtime
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
-  source_dir    = "${path.root}/../../backend/lambdas/upload_init"
+  source_dir    = "${path.root}/../../../backend/lambdas/upload_init"
 
   environment_variables = {
     BUCKET_NAME   = var.bucket_name
@@ -129,7 +129,7 @@ module "lambda_get_metadata" {
   runtime       = var.lambda_runtime
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
-  source_dir    = "${path.root}/../../backend/lambdas/get_metadata"
+  source_dir    = "${path.root}/../../../backend/lambdas/get_metadata"
 
   environment_variables = {
     TABLE_NAME  = var.table_name
@@ -157,7 +157,7 @@ module "lambda_download" {
   runtime       = var.lambda_runtime
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
-  source_dir    = "${path.root}/../../backend/lambdas/download"
+  source_dir    = "${path.root}/../../../backend/lambdas/download"
 
   environment_variables = {
     BUCKET_NAME = var.bucket_name
@@ -194,7 +194,7 @@ module "lambda_cleanup" {
   runtime       = var.lambda_runtime
   timeout       = 300 # 5 minutes for cleanup
   memory_size   = var.lambda_memory_size
-  source_dir    = "${path.root}/../../backend/lambdas/cleanup"
+  source_dir    = "${path.root}/../../../backend/lambdas/cleanup"
 
   environment_variables = {
     BUCKET_NAME = var.bucket_name
@@ -231,7 +231,7 @@ module "lambda_report_abuse" {
   runtime       = var.lambda_runtime
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
-  source_dir    = "${path.root}/../../backend/lambdas/report_abuse"
+  source_dir    = "${path.root}/../../../backend/lambdas/report_abuse"
 
   environment_variables = {
     TABLE_NAME  = var.table_name
@@ -389,12 +389,6 @@ resource "aws_api_gateway_stage" "main" {
   deployment_id = aws_api_gateway_deployment.main.id
   rest_api_id   = aws_api_gateway_rest_api.main.id
   stage_name    = var.environment
-
-  # Throttling settings
-  throttle_settings {
-    burst_limit = 100
-    rate_limit  = 50
-  }
 
   # Access logging
   access_log_settings {

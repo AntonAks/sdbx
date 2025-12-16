@@ -33,6 +33,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "files" {
     id     = "expire-old-files"
     status = "Enabled"
 
+    filter {}
+
     expiration {
       days = var.lifecycle_expiration_days
     }

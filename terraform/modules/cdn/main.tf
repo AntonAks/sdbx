@@ -34,7 +34,7 @@ resource "aws_cloudfront_distribution" "main" {
 
   # Origin: S3 static bucket
   origin {
-    domain_name = "${var.static_bucket_id}.s3.amazonaws.com"
+    domain_name = var.static_bucket_regional_domain_name
     origin_id   = "S3-${var.static_bucket_id}"
 
     s3_origin_config {
