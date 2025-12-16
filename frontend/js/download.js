@@ -6,7 +6,7 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'https://laeg1n0efh.execute-api.eu-central-1.amazonaws.com/dev',
+    API_BASE_URL: '/dev',  // Routed through CloudFront to API Gateway
 };
 
 // DOM elements

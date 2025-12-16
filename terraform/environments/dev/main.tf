@@ -6,6 +6,12 @@ locals {
   }
 }
 
+# Generate CloudFront origin verification secret
+resource "random_password" "cloudfront_secret" {
+  length  = 32
+  special = false
+}
+
 # Storage Module - S3 buckets and DynamoDB table
 module "storage" {
   source = "../../modules/storage"
@@ -19,14 +25,15 @@ module "storage" {
 module "api" {
   source = "../../modules/api"
 
-  project_name        = var.project_name
-  environment         = var.environment
-  bucket_name         = module.storage.files_bucket_name
-  bucket_arn          = module.storage.files_bucket_arn
-  table_name          = module.storage.table_name
-  table_arn           = module.storage.table_arn
-  max_file_size_bytes = var.max_file_size_bytes
-  tags                = local.common_tags
+  project_name         = var.project_name
+  environment          = var.environment
+  bucket_name          = module.storage.files_bucket_name
+  bucket_arn           = module.storage.files_bucket_arn
+  table_name           = module.storage.table_name
+  table_arn            = module.storage.table_arn
+  max_file_size_bytes  = var.max_file_size_bytes
+  cloudfront_secret    = random_password.cloudfront_secret.result
+  tags                 = local.common_tags
 }
 
 # CDN Module - CloudFront distribution for frontend
@@ -38,7 +45,8 @@ module "cdn" {
   static_bucket_id                   = module.storage.static_bucket_id
   static_bucket_arn                  = module.storage.static_bucket_arn
   static_bucket_regional_domain_name = module.storage.static_bucket_regional_domain_name
-  api_domain                         = module.api.api_invoke_url
+  api_endpoint                       = module.api.api_invoke_url
+  cloudfront_secret                  = random_password.cloudfront_secret.result
   tags                               = local.common_tags
 }
 

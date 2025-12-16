@@ -8,6 +8,7 @@ from typing import Any
 from shared.dynamo import get_file_record
 from shared.exceptions import ValidationError
 from shared.json_helper import dumps as json_dumps
+from shared.security import verify_cloudfront_origin, build_error_response
 from shared.validation import validate_file_id
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,10 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     Returns file info if available, 404 if not found or expired.
     """
     try:
+        # Verify request comes from CloudFront
+        if not verify_cloudfront_origin(event):
+            return build_error_response(403, 'Direct API access not allowed')
+
         # Extract file ID from path
         file_id = event.get("pathParameters", {}).get("file_id")
 

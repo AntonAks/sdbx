@@ -94,10 +94,11 @@ module "lambda_upload_init" {
   source_dir    = "${path.root}/../../../backend/lambdas/upload_init"
 
   environment_variables = {
-    BUCKET_NAME   = var.bucket_name
-    TABLE_NAME    = var.table_name
-    ENVIRONMENT   = var.environment
-    MAX_FILE_SIZE = var.max_file_size_bytes
+    BUCKET_NAME        = var.bucket_name
+    TABLE_NAME         = var.table_name
+    ENVIRONMENT        = var.environment
+    MAX_FILE_SIZE      = var.max_file_size_bytes
+    CLOUDFRONT_SECRET  = var.cloudfront_secret
   }
 
   iam_policy_statements = [
@@ -132,8 +133,9 @@ module "lambda_get_metadata" {
   source_dir    = "${path.root}/../../../backend/lambdas/get_metadata"
 
   environment_variables = {
-    TABLE_NAME  = var.table_name
-    ENVIRONMENT = var.environment
+    TABLE_NAME         = var.table_name
+    ENVIRONMENT        = var.environment
+    CLOUDFRONT_SECRET  = var.cloudfront_secret
   }
 
   iam_policy_statements = [
@@ -160,9 +162,10 @@ module "lambda_download" {
   source_dir    = "${path.root}/../../../backend/lambdas/download"
 
   environment_variables = {
-    BUCKET_NAME = var.bucket_name
-    TABLE_NAME  = var.table_name
-    ENVIRONMENT = var.environment
+    BUCKET_NAME        = var.bucket_name
+    TABLE_NAME         = var.table_name
+    ENVIRONMENT        = var.environment
+    CLOUDFRONT_SECRET  = var.cloudfront_secret
   }
 
   iam_policy_statements = [
@@ -234,8 +237,9 @@ module "lambda_report_abuse" {
   source_dir    = "${path.root}/../../../backend/lambdas/report_abuse"
 
   environment_variables = {
-    TABLE_NAME  = var.table_name
-    ENVIRONMENT = var.environment
+    TABLE_NAME         = var.table_name
+    ENVIRONMENT        = var.environment
+    CLOUDFRONT_SECRET  = var.cloudfront_secret
   }
 
   iam_policy_statements = [

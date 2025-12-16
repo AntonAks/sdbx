@@ -42,6 +42,26 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
 
+  # Origin: API Gateway with custom security header
+  origin {
+    domain_name = replace(replace(var.api_endpoint, "https://", ""), "/dev", "")
+    origin_id   = "API-Gateway"
+    origin_path = ""  # No prefix - frontend includes /dev in path
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+
+    # Add secret header to all API requests
+    custom_header {
+      name  = "X-Origin-Verify"
+      value = var.cloudfront_secret
+    }
+  }
+
   # Default cache behavior
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
@@ -104,6 +124,29 @@ resource "aws_cloudfront_distribution" "main" {
     min_ttl                = 0
     default_ttl            = 86400   # 24 hours
     max_ttl                = 31536000 # 1 year
+    compress               = true
+  }
+
+  # Cache behavior for API calls (proxied to API Gateway with security header)
+  ordered_cache_behavior {
+    path_pattern     = "/dev/*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "API-Gateway"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Accept", "Content-Type", "Authorization"]
+
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0  # Don't cache API responses
+    max_ttl                = 0
     compress               = true
   }
 

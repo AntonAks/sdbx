@@ -13,6 +13,7 @@ from shared.exceptions import (
 )
 from shared.json_helper import dumps as json_dumps
 from shared.s3 import generate_download_url
+from shared.security import verify_cloudfront_origin, build_error_response
 from shared.validation import validate_file_id
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,10 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     each file can only be downloaded once.
     """
     try:
+        # Verify request comes from CloudFront
+        if not verify_cloudfront_origin(event):
+            return build_error_response(403, 'Direct API access not allowed')
+
         # Extract file ID from path
         file_id = event.get("pathParameters", {}).get("file_id")
 

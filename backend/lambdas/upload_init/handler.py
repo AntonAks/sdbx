@@ -11,6 +11,7 @@ from typing import Any
 from shared.dynamo import create_file_record
 from shared.exceptions import ValidationError
 from shared.s3 import generate_upload_url
+from shared.security import verify_cloudfront_origin, build_error_response
 from shared.validation import validate_file_size, validate_ttl
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,10 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     }
     """
     try:
+        # Verify request comes from CloudFront
+        if not verify_cloudfront_origin(event):
+            return build_error_response(403, 'Direct API access not allowed')
+
         # Parse request body
         body = json.loads(event.get("body", "{}"))
         file_size = body.get("file_size")

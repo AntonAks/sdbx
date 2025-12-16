@@ -40,6 +40,12 @@ variable "max_file_size_bytes" {
   default     = 104857600 # 100 MB
 }
 
+variable "cloudfront_secret" {
+  description = "Secret for CloudFront origin verification"
+  type        = string
+  sensitive   = true
+}
+
 variable "lambda_runtime" {
   description = "Lambda runtime version"
   type        = string
