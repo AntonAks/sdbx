@@ -37,3 +37,9 @@ variable "allowed_ttl_hours" {
     error_message = "TTL values must be between 1 and 168 hours (1 week)."
   }
 }
+
+variable "recaptcha_secret_key" {
+  description = "Google reCAPTCHA v3 secret key for bot protection"
+  type        = string
+  sensitive   = true
+}

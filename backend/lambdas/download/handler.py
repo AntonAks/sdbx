@@ -1,5 +1,6 @@
 """Lambda function: Download file."""
 
+import json
 import logging
 import os
 from typing import Any
@@ -13,7 +14,7 @@ from shared.exceptions import (
 )
 from shared.json_helper import dumps as json_dumps
 from shared.s3 import generate_download_url
-from shared.security import verify_cloudfront_origin, build_error_response
+from shared.security import verify_cloudfront_origin, verify_recaptcha, build_error_response
 from shared.validation import validate_file_id
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,20 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         # Verify request comes from CloudFront
         if not verify_cloudfront_origin(event):
             return build_error_response(403, 'Direct API access not allowed')
+
+        # Parse request body
+        body = json.loads(event.get("body", "{}"))
+        recaptcha_token = body.get("recaptcha_token")
+
+        # Verify reCAPTCHA token
+        source_ip = event.get("requestContext", {}).get("identity", {}).get("sourceIp")
+        is_valid, score, error_msg = verify_recaptcha(recaptcha_token, source_ip)
+
+        if not is_valid:
+            logger.warning(f"reCAPTCHA verification failed for download: {error_msg} (score: {score})")
+            return _error_response(403, error_msg or "Bot activity detected")
+
+        logger.info(f"reCAPTCHA verification succeeded for download with score: {score}")
 
         # Extract file ID from path
         file_id = event.get("pathParameters", {}).get("file_id")

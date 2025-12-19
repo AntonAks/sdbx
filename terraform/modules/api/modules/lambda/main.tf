@@ -12,6 +12,12 @@ resource "null_resource" "lambda_build" {
       mkdir -p ${path.module}/builds/${var.function_name}_temp
       cp ${var.source_dir}/handler.py ${path.module}/builds/${var.function_name}_temp/
       cp -r ${path.root}/../../../backend/shared ${path.module}/builds/${var.function_name}_temp/
+
+      # Install dependencies if requirements.txt exists
+      if [ -f ${var.source_dir}/requirements.txt ]; then
+        pip install -q -r ${var.source_dir}/requirements.txt -t ${path.module}/builds/${var.function_name}_temp/
+      fi
+
       cd ${path.module}/builds/${var.function_name}_temp
       zip -r ../${var.function_name}.zip . -x "*.pyc" -x "__pycache__/*"
       cd ..
@@ -79,6 +85,7 @@ resource "aws_lambda_function" "main" {
   runtime         = var.runtime
   timeout         = var.timeout
   memory_size     = var.memory_size
+  layers          = var.layers
 
   environment {
     variables = var.environment_variables

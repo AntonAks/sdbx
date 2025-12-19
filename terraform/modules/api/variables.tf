@@ -46,6 +46,12 @@ variable "cloudfront_secret" {
   sensitive   = true
 }
 
+variable "recaptcha_secret_key" {
+  description = "Google reCAPTCHA v3 secret key for bot protection"
+  type        = string
+  sensitive   = true
+}
+
 variable "lambda_runtime" {
   description = "Lambda runtime version"
   type        = string

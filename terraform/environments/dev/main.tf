@@ -33,6 +33,7 @@ module "api" {
   table_arn            = module.storage.table_arn
   max_file_size_bytes  = var.max_file_size_bytes
   cloudfront_secret    = random_password.cloudfront_secret.result
+  recaptcha_secret_key = var.recaptcha_secret_key
   tags                 = local.common_tags
 }
 

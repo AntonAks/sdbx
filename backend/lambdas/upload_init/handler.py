@@ -11,7 +11,7 @@ from typing import Any
 from shared.dynamo import create_file_record
 from shared.exceptions import ValidationError
 from shared.s3 import generate_upload_url
-from shared.security import verify_cloudfront_origin, build_error_response
+from shared.security import verify_cloudfront_origin, verify_recaptcha, build_error_response
 from shared.validation import validate_file_size, validate_ttl
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,8 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     Expected request body:
     {
         "file_size": 1024,
-        "ttl": "1h"
+        "ttl": "1h",
+        "recaptcha_token": "token-from-frontend"
     }
 
     Returns:
@@ -56,6 +57,17 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         body = json.loads(event.get("body", "{}"))
         file_size = body.get("file_size")
         ttl = body.get("ttl")
+        recaptcha_token = body.get("recaptcha_token")
+
+        # Verify reCAPTCHA token
+        source_ip = event.get("requestContext", {}).get("identity", {}).get("sourceIp")
+        is_valid, score, error_msg = verify_recaptcha(recaptcha_token, source_ip)
+
+        if not is_valid:
+            logger.warning(f"reCAPTCHA verification failed: {error_msg} (score: {score})")
+            return _error_response(403, error_msg or "Bot activity detected")
+
+        logger.info(f"reCAPTCHA verification succeeded with score: {score}")
 
         # Validate input
         validate_file_size(file_size)

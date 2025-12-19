@@ -256,17 +256,19 @@ curl -X POST https://your-api.execute-api.region.amazonaws.com/dev/upload/init \
 
 #### 1.6 Deployment Checklist
 
-- [ ] Add random_password resource to cdn module
-- [ ] Add custom_header to CloudFront origin
-- [ ] Output origin secret from cdn module
-- [ ] Pass secret to api module
-- [ ] Add CLOUDFRONT_SECRET to Lambda environment variables
-- [ ] Create shared/security.py with verification logic
-- [ ] Add verification to all Lambda handlers
-- [ ] Deploy to dev environment
-- [ ] Test direct API calls are blocked
-- [ ] Test frontend still works
+- [x] Add random_password resource to cdn module
+- [x] Add custom_header to CloudFront origin
+- [x] Output origin secret from cdn module
+- [x] Pass secret to api module
+- [x] Add CLOUDFRONT_SECRET to Lambda environment variables
+- [x] Create shared/security.py with verification logic
+- [x] Add verification to all Lambda handlers
+- [x] Deploy to dev environment
+- [x] Test direct API calls are blocked
+- [x] Test frontend still works
 - [ ] Deploy to prod
+
+**Status**: ✅ **COMPLETED** - Phase 1 deployed to dev (December 16, 2025)
 
 ---
 
@@ -601,19 +603,26 @@ resource "aws_cloudwatch_metric_alarm" "high_cost" {
 
 ## Implementation Order
 
-### Phase 1: Quick Win - CloudFront Header (1-2 hours)
-**Deploy ASAP - Immediate protection with zero cost**
+### Phase 1: Quick Win - CloudFront Header ✅ COMPLETED
+**Status**: Deployed to dev (December 16, 2025)
 
-1. [ ] Add `random_password` resource to cdn module
-2. [ ] Add custom header to CloudFront origin
-3. [ ] Create `backend/shared/security.py` with verification logic
-4. [ ] Add verification to all 4 Lambda handlers
-5. [ ] Deploy to dev environment
-6. [ ] Test: Direct API calls blocked ✓
-7. [ ] Test: Frontend still works ✓
-8. [ ] Deploy to prod
+1. [x] Add `random_password` resource to cdn module
+2. [x] Add custom header to CloudFront origin
+3. [x] Create `backend/shared/security.py` with verification logic
+4. [x] Add verification to all 4 Lambda handlers
+5. [x] Deploy to dev environment
+6. [x] Test: Direct API calls blocked ✓
+7. [x] Test: Frontend still works ✓
+8. [ ] Deploy to prod (pending)
 
 **Result after Phase 1:** ~60-70% of script-based attacks blocked
+
+**Implementation Details:**
+- CloudFront adds `X-Origin-Verify` header with 32-character random secret
+- All Lambda functions verify header presence and value
+- Direct API calls return 403 Forbidden
+- Zero cost, immediate protection
+- Dev URL: `https://d21g35hqtnbz7i.cloudfront.net`
 
 ### Phase 2: reCAPTCHA Implementation (1-2 days)
 **Complete before production announcement**
