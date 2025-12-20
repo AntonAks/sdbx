@@ -256,21 +256,25 @@ curl -X POST https://your-api.execute-api.region.amazonaws.com/dev/upload/init \
 
 #### 1.6 Deployment Checklist
 
-- [ ] Add random_password resource to cdn module
-- [ ] Add custom_header to CloudFront origin
-- [ ] Output origin secret from cdn module
-- [ ] Pass secret to api module
-- [ ] Add CLOUDFRONT_SECRET to Lambda environment variables
-- [ ] Create shared/security.py with verification logic
-- [ ] Add verification to all Lambda handlers
-- [ ] Deploy to dev environment
-- [ ] Test direct API calls are blocked
-- [ ] Test frontend still works
+- [x] Add random_password resource to cdn module
+- [x] Add custom_header to CloudFront origin
+- [x] Output origin secret from cdn module
+- [x] Pass secret to api module
+- [x] Add CLOUDFRONT_SECRET to Lambda environment variables
+- [x] Create shared/security.py with verification logic
+- [x] Add verification to all Lambda handlers
+- [x] Deploy to dev environment
+- [x] Test direct API calls are blocked
+- [x] Test frontend still works
 - [ ] Deploy to prod
+
+**Status**: ✅ **COMPLETED** - Phase 1 deployed to dev (December 16, 2025)
 
 ---
 
 ## 2. reCAPTCHA v3 Implementation
+
+**Status**: ✅ **COMPLETED** - Deployed to dev (December 2024)
 
 ### Why reCAPTCHA First?
 - ✅ Designed for client-side apps (no secret exposure)
@@ -282,11 +286,11 @@ curl -X POST https://your-api.execute-api.region.amazonaws.com/dev/upload/init \
 ### Implementation Steps
 
 #### 1.1 Register with Google reCAPTCHA
-- [ ] Go to https://www.google.com/recaptcha/admin
-- [ ] Register sdbx domain
-- [ ] Get Site Key (public, goes in frontend)
-- [ ] Get Secret Key (private, goes in Lambda env vars)
-- [ ] Choose reCAPTCHA v3 (score-based, invisible)
+- [x] Go to https://www.google.com/recaptcha/admin
+- [x] Register sdbx domain
+- [x] Get Site Key (public, goes in frontend)
+- [x] Get Secret Key (private, goes in Lambda env vars)
+- [x] Choose reCAPTCHA v3 (score-based, invisible)
 
 #### 1.2 Frontend Changes
 
@@ -601,34 +605,47 @@ resource "aws_cloudwatch_metric_alarm" "high_cost" {
 
 ## Implementation Order
 
-### Phase 1: Quick Win - CloudFront Header (1-2 hours)
-**Deploy ASAP - Immediate protection with zero cost**
+### Phase 1: Quick Win - CloudFront Header ✅ COMPLETED
+**Status**: Deployed to dev (December 16, 2025)
 
-1. [ ] Add `random_password` resource to cdn module
-2. [ ] Add custom header to CloudFront origin
-3. [ ] Create `backend/shared/security.py` with verification logic
-4. [ ] Add verification to all 4 Lambda handlers
-5. [ ] Deploy to dev environment
-6. [ ] Test: Direct API calls blocked ✓
-7. [ ] Test: Frontend still works ✓
-8. [ ] Deploy to prod
+1. [x] Add `random_password` resource to cdn module
+2. [x] Add custom header to CloudFront origin
+3. [x] Create `backend/shared/security.py` with verification logic
+4. [x] Add verification to all 4 Lambda handlers
+5. [x] Deploy to dev environment
+6. [x] Test: Direct API calls blocked ✓
+7. [x] Test: Frontend still works ✓
+8. [ ] Deploy to prod (pending)
 
 **Result after Phase 1:** ~60-70% of script-based attacks blocked
 
-### Phase 2: reCAPTCHA Implementation (1-2 days)
-**Complete before production announcement**
+**Implementation Details:**
+- CloudFront adds `X-Origin-Verify` header with 32-character random secret
+- All Lambda functions verify header presence and value
+- Direct API calls return 403 Forbidden
+- Zero cost, immediate protection
+- Dev URL: `https://d21g35hqtnbz7i.cloudfront.net`
 
-1. [ ] Register Google reCAPTCHA account (get keys)
-2. [ ] Implement reCAPTCHA in frontend (add script + token generation)
-3. [ ] Add reCAPTCHA verification in backend (all upload endpoints)
-4. [ ] Add `requests` library to Lambda requirements
-5. [ ] Add Lambda environment variables for reCAPTCHA
-6. [ ] Test thoroughly in dev environment
-7. [ ] Monitor for false positives
-8. [ ] Adjust threshold if needed (start with 0.5)
-9. [ ] Deploy to prod
+### Phase 2: reCAPTCHA Implementation ✅ COMPLETED
+**Deployed to dev (December 2024)**
+
+1. [x] Register Google reCAPTCHA account (get keys)
+2. [x] Implement reCAPTCHA in frontend (add script + token generation)
+3. [x] Add reCAPTCHA verification in backend (upload, download, report endpoints)
+4. [x] Create Lambda Layer for shared dependencies (`requests` library)
+5. [x] Add Lambda environment variables for reCAPTCHA
+6. [x] Test thoroughly in dev environment
+7. [x] Monitor for false positives (score: 0.9 for legitimate users)
+8. [x] Threshold set to 0.5 (working well)
+9. [ ] Deploy to prod (pending)
 
 **Result after Phase 2:** ~95-98% of automated abuse blocked
+
+**Lambda Layer Implementation:**
+- Created `sdbx-dev-dependencies:1` layer containing `requests` library
+- All 5 Lambda functions now use shared layer (smaller deployments)
+- Faster deployments - dependencies not re-uploaded with each function
+- Consistent dependency versions across all functions
 
 ### Phase 3: Production Launch
 1. [ ] Both layers deployed and tested

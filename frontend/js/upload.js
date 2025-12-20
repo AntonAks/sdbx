@@ -6,8 +6,9 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'https://laeg1n0efh.execute-api.eu-central-1.amazonaws.com/dev',
+    API_BASE_URL: '/dev',  // Routed through CloudFront to API Gateway
     MAX_FILE_SIZE: 100 * 1024 * 1024, // 100 MB
+    RECAPTCHA_SITE_KEY: '6LdV7DAsAAAAAI3U_2efIlWrcOuRiUDS4N3SQhQD',  // Public site key
 };
 
 // DOM elements
@@ -156,9 +157,24 @@ async function handleUpload() {
 }
 
 /**
+ * Get reCAPTCHA token
+ */
+async function getRecaptchaToken() {
+    try {
+        return await grecaptcha.execute(CONFIG.RECAPTCHA_SITE_KEY, { action: 'upload' });
+    } catch (error) {
+        console.error('reCAPTCHA error:', error);
+        throw new Error('Failed to verify reCAPTCHA. Please refresh and try again.');
+    }
+}
+
+/**
  * Initialize upload with API
  */
 async function initializeUpload(fileSize, fileName, ttl) {
+    // Get reCAPTCHA token
+    const recaptchaToken = await getRecaptchaToken();
+
     const response = await fetch(`${CONFIG.API_BASE_URL}/upload/init`, {
         method: 'POST',
         headers: {
@@ -167,11 +183,14 @@ async function initializeUpload(fileSize, fileName, ttl) {
         body: JSON.stringify({
             file_size: fileSize,
             ttl: ttl,
+            recaptcha_token: recaptchaToken,
         }),
     });
 
     if (!response.ok) {
-        throw new Error(`Upload initialization failed: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Upload initialization failed: ${response.status}`;
+        throw new Error(errorMessage);
     }
 
     return response.json();

@@ -29,9 +29,15 @@ variable "static_bucket_regional_domain_name" {
   type        = string
 }
 
-variable "api_domain" {
-  description = "API Gateway domain"
+variable "api_endpoint" {
+  description = "API Gateway full endpoint URL"
   type        = string
+}
+
+variable "cloudfront_secret" {
+  description = "Secret for CloudFront origin verification"
+  type        = string
+  sensitive   = true
 }
 
 variable "price_class" {

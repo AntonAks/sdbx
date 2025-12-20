@@ -7,6 +7,7 @@ from typing import Any
 
 from shared.dynamo import get_file_record, increment_report_count
 from shared.exceptions import ValidationError
+from shared.security import verify_cloudfront_origin, verify_recaptcha, build_error_response
 from shared.validation import validate_file_id
 
 logger = logging.getLogger(__name__)
@@ -24,10 +25,25 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     If report count reaches threshold, file should be reviewed/deleted.
     """
     try:
+        # Verify request comes from CloudFront
+        if not verify_cloudfront_origin(event):
+            return build_error_response(403, 'Direct API access not allowed')
+
         # Parse request
         file_id = event.get("pathParameters", {}).get("file_id")
         body = json.loads(event.get("body", "{}"))
         reason = body.get("reason", "")
+        recaptcha_token = body.get("recaptcha_token")
+
+        # Verify reCAPTCHA token
+        source_ip = event.get("requestContext", {}).get("identity", {}).get("sourceIp")
+        is_valid, score, error_msg = verify_recaptcha(recaptcha_token, source_ip)
+
+        if not is_valid:
+            logger.warning(f"reCAPTCHA verification failed for abuse report: {error_msg} (score: {score})")
+            return _error_response(403, error_msg or "Bot activity detected")
+
+        logger.info(f"reCAPTCHA verification succeeded for abuse report with score: {score}")
 
         # Validate input
         validate_file_id(file_id)

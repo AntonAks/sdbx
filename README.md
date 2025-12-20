@@ -36,9 +36,28 @@
 
 - **Encryption**: AES-256-GCM with 256-bit keys
 - **Zero-knowledge**: Decryption keys and filenames stay in URL fragments, never sent to server
+- **Bot protection**: Google reCAPTCHA v3 with invisible verification (deployed)
+- **Origin verification**: CloudFront custom header blocks direct API access (deployed)
 - **Atomic operations**: Race condition prevention using conditional database updates
-- **HTTPS only**: All communication encrypted in transit
+- **HTTPS only**: All communication encrypted in transit (TLS 1.2+)
 - **No tracking**: No user accounts, no IP logging, no analytics
+
+### Security Layers
+
+**Layer 1 - CloudFront Origin Verification** ✅ Deployed
+- Custom secret header blocks direct API calls
+- Only requests through CloudFront are accepted
+- Prevents automated script abuse
+- Zero cost protection
+
+**Layer 2 - reCAPTCHA v3** ✅ Deployed
+- Bot detection and prevention on all POST endpoints
+- Invisible to legitimate users (score-based verification)
+- Protects upload, download, and abuse report endpoints
+- Minimum score threshold: 0.5 (adjustable)
+- Lambda Layer for efficient dependency management
+
+See [SECURITY_PLAN.md](./SECURITY_PLAN.md) for complete security implementation details.
 
 ## Limitations
 

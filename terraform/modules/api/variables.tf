@@ -40,6 +40,18 @@ variable "max_file_size_bytes" {
   default     = 104857600 # 100 MB
 }
 
+variable "cloudfront_secret" {
+  description = "Secret for CloudFront origin verification"
+  type        = string
+  sensitive   = true
+}
+
+variable "recaptcha_secret_key" {
+  description = "Google reCAPTCHA v3 secret key for bot protection"
+  type        = string
+  sensitive   = true
+}
+
 variable "lambda_runtime" {
   description = "Lambda runtime version"
   type        = string

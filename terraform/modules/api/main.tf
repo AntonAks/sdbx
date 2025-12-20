@@ -10,6 +10,35 @@ resource "aws_api_gateway_rest_api" "main" {
   tags = var.tags
 }
 
+# Lambda Layer for shared dependencies
+resource "null_resource" "dependencies_layer_build" {
+  triggers = {
+    requirements = filemd5("${path.module}/layer_requirements.txt")
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      mkdir -p ${path.module}/builds/layer/python
+      pip install -q -r ${path.module}/layer_requirements.txt -t ${path.module}/builds/layer/python/
+      cd ${path.module}/builds/layer
+      zip -r ../dependencies-layer.zip python/ -x "*.pyc" -x "__pycache__/*"
+    EOT
+  }
+}
+
+resource "aws_lambda_layer_version" "dependencies" {
+  filename            = "${path.module}/builds/dependencies-layer.zip"
+  layer_name          = "${var.project_name}-${var.environment}-dependencies"
+  compatible_runtimes = [var.lambda_runtime]
+  description         = "Shared dependencies: requests, boto3"
+
+  depends_on = [null_resource.dependencies_layer_build]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # API Gateway Resources
 resource "aws_api_gateway_resource" "upload" {
   rest_api_id = aws_api_gateway_rest_api.main.id
@@ -92,12 +121,15 @@ module "lambda_upload_init" {
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
   source_dir    = "${path.root}/../../../backend/lambdas/upload_init"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    BUCKET_NAME   = var.bucket_name
-    TABLE_NAME    = var.table_name
-    ENVIRONMENT   = var.environment
-    MAX_FILE_SIZE = var.max_file_size_bytes
+    BUCKET_NAME           = var.bucket_name
+    TABLE_NAME            = var.table_name
+    ENVIRONMENT           = var.environment
+    MAX_FILE_SIZE         = var.max_file_size_bytes
+    CLOUDFRONT_SECRET     = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [
@@ -130,10 +162,12 @@ module "lambda_get_metadata" {
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
   source_dir    = "${path.root}/../../../backend/lambdas/get_metadata"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    TABLE_NAME  = var.table_name
-    ENVIRONMENT = var.environment
+    TABLE_NAME         = var.table_name
+    ENVIRONMENT        = var.environment
+    CLOUDFRONT_SECRET  = var.cloudfront_secret
   }
 
   iam_policy_statements = [
@@ -158,11 +192,14 @@ module "lambda_download" {
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
   source_dir    = "${path.root}/../../../backend/lambdas/download"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    BUCKET_NAME = var.bucket_name
-    TABLE_NAME  = var.table_name
-    ENVIRONMENT = var.environment
+    BUCKET_NAME           = var.bucket_name
+    TABLE_NAME            = var.table_name
+    ENVIRONMENT           = var.environment
+    CLOUDFRONT_SECRET     = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [
@@ -195,6 +232,7 @@ module "lambda_cleanup" {
   timeout       = 300 # 5 minutes for cleanup
   memory_size   = var.lambda_memory_size
   source_dir    = "${path.root}/../../../backend/lambdas/cleanup"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
     BUCKET_NAME = var.bucket_name
@@ -232,10 +270,13 @@ module "lambda_report_abuse" {
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
   source_dir    = "${path.root}/../../../backend/lambdas/report_abuse"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    TABLE_NAME  = var.table_name
-    ENVIRONMENT = var.environment
+    TABLE_NAME            = var.table_name
+    ENVIRONMENT           = var.environment
+    CLOUDFRONT_SECRET     = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [

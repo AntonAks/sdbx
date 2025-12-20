@@ -6,7 +6,8 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'https://laeg1n0efh.execute-api.eu-central-1.amazonaws.com/dev',
+    API_BASE_URL: '/dev',  // Routed through CloudFront to API Gateway
+    RECAPTCHA_SITE_KEY: '6LdV7DAsAAAAAI3U_2efIlWrcOuRiUDS4N3SQhQD',  // Public site key
 };
 
 // DOM elements
@@ -190,8 +191,17 @@ async function handleDownload() {
  * Request download URL from API
  */
 async function requestDownload() {
+    // Get reCAPTCHA token
+    const recaptchaToken = await getRecaptchaToken('download');
+
     const response = await fetch(`${CONFIG.API_BASE_URL}/files/${fileId}/download`, {
         method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            recaptcha_token: recaptchaToken,
+        }),
     });
 
     if (response.status === 404) {
@@ -276,12 +286,18 @@ async function handleReportAbuse() {
     if (reason === null) return; // User cancelled
 
     try {
+        // Get reCAPTCHA token
+        const recaptchaToken = await getRecaptchaToken('report');
+
         const response = await fetch(`${CONFIG.API_BASE_URL}/files/${fileId}/report`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ reason }),
+            body: JSON.stringify({
+                reason,
+                recaptcha_token: recaptchaToken,
+            }),
         });
 
         if (response.ok) {
@@ -292,5 +308,17 @@ async function handleReportAbuse() {
     } catch (error) {
         console.error('Report error:', error);
         alert('Failed to submit report. Please try again.');
+    }
+}
+
+/**
+ * Get reCAPTCHA token
+ */
+async function getRecaptchaToken(action) {
+    try {
+        return await grecaptcha.execute(CONFIG.RECAPTCHA_SITE_KEY, { action: action });
+    } catch (error) {
+        console.error('reCAPTCHA error:', error);
+        throw new Error('Failed to verify reCAPTCHA. Please refresh and try again.');
     }
 }

@@ -89,5 +89,7 @@ Thumbs.db
 *.bak
 *.backup
 
+terraform/modules/api/builds/layer
+
 ARCHITECTURE.md
 DEPLOYMENT.md
