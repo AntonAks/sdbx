@@ -30,7 +30,7 @@ resource "aws_cloudfront_distribution" "main" {
   price_class         = var.price_class
 
   # Custom domain (optional)
-  aliases = var.custom_domain != "" ? [var.custom_domain] : []
+  aliases = var.custom_domain != "" ? [var.custom_domain, "www.${var.custom_domain}"] : []
 
   # Origin: S3 static bucket
   origin {
@@ -44,9 +44,9 @@ resource "aws_cloudfront_distribution" "main" {
 
   # Origin: API Gateway with custom security header
   origin {
-    domain_name = replace(replace(var.api_endpoint, "https://", ""), "/dev", "")
+    domain_name = replace(replace(replace(var.api_endpoint, "https://", ""), "/dev", ""), "/prod", "")
     origin_id   = "API-Gateway"
-    origin_path = ""  # No prefix - frontend includes /dev in path
+    origin_path = ""  # No prefix - frontend includes /prod or /dev in path
 
     custom_origin_config {
       http_port              = 80
@@ -127,9 +127,32 @@ resource "aws_cloudfront_distribution" "main" {
     compress               = true
   }
 
-  # Cache behavior for API calls (proxied to API Gateway with security header)
+  # Cache behavior for API calls - dev environment (proxied to API Gateway with security header)
   ordered_cache_behavior {
     path_pattern     = "/dev/*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "API-Gateway"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Accept", "Content-Type", "Authorization"]
+
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0  # Don't cache API responses
+    max_ttl                = 0
+    compress               = true
+  }
+
+  # Cache behavior for API calls - prod environment (proxied to API Gateway with security header)
+  ordered_cache_behavior {
+    path_pattern     = "/prod/*"
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "API-Gateway"

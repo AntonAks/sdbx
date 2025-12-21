@@ -37,3 +37,21 @@ variable "allowed_ttl_hours" {
     error_message = "TTL values must be between 1 and 168 hours (1 week)."
   }
 }
+
+variable "recaptcha_secret_key" {
+  description = "Google reCAPTCHA v3 secret key for bot protection"
+  type        = string
+  sensitive   = true
+}
+
+variable "custom_domain" {
+  description = "Custom domain name for the production site"
+  type        = string
+  default     = ""
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN for custom domain (must be in us-east-1)"
+  type        = string
+  default     = ""
+}

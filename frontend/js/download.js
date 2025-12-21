@@ -6,8 +6,8 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: '/dev',  // Routed through CloudFront to API Gateway
-    RECAPTCHA_SITE_KEY: '6LdV7DAsAAAAAI3U_2efIlWrcOuRiUDS4N3SQhQD',  // Public site key
+    API_BASE_URL: '/prod',  // Routed through CloudFront to API Gateway
+    RECAPTCHA_SITE_KEY: '6LdulTIsAAAAAJdhvyMU6B1og7GE7d5DySrQUQiv',  // Public site key
 };
 
 // DOM elements

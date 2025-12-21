@@ -6,9 +6,9 @@
 
 // Configuration
 const CONFIG = {
-    API_BASE_URL: '/dev',  // Routed through CloudFront to API Gateway
-    MAX_FILE_SIZE: 100 * 1024 * 1024, // 100 MB
-    RECAPTCHA_SITE_KEY: '6LdV7DAsAAAAAI3U_2efIlWrcOuRiUDS4N3SQhQD',  // Public site key
+    API_BASE_URL: '/prod',  // Routed through CloudFront to API Gateway
+    MAX_FILE_SIZE: 500 * 1024 * 1024, // 500 MB (0.5 GB)
+    RECAPTCHA_SITE_KEY: '6LdulTIsAAAAAJdhvyMU6B1og7GE7d5DySrQUQiv',  // Public site key
 };
 
 // DOM elements

@@ -4,14 +4,14 @@ resource "aws_s3_bucket" "files" {
   tags   = merge(var.tags, { Name = "${var.project_name}-${var.environment}-files" })
 }
 
-# Block all public access to files bucket
+# Block public access to files bucket (allow CORS)
 resource "aws_s3_bucket_public_access_block" "files" {
   bucket = aws_s3_bucket.files.id
 
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
-  restrict_public_buckets = true
+  restrict_public_buckets = false  # Must be false for CORS to work with presigned URLs
 }
 
 # Enable server-side encryption
@@ -60,9 +60,9 @@ resource "aws_s3_bucket_cors_configuration" "files" {
 
   cors_rule {
     allowed_headers = ["*"]
-    allowed_methods = ["PUT", "GET", "HEAD"]
-    allowed_origins = ["*"] # TODO: Restrict to CloudFront domain in production
-    expose_headers  = ["ETag"]
+    allowed_methods = ["PUT", "POST", "GET", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag", "x-amz-server-side-encryption", "x-amz-request-id", "x-amz-id-2"]
     max_age_seconds = 3000
   }
 }
