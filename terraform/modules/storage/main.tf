@@ -67,13 +67,14 @@ resource "aws_s3_bucket_cors_configuration" "files" {
   bucket = aws_s3_bucket.files.id
 
   cors_rule {
-    allowed_headers = ["Content-Type", "x-amz-*"] # Only essential headers
-    allowed_methods = ["PUT"]                     # Only PUT for presigned URL uploads
+    allowed_headers = ["Content-Type", "x-amz-*"]     # Only essential headers
+    allowed_methods = ["GET", "PUT", "HEAD"]          # GET for downloads, PUT for uploads, HEAD for metadata
     allowed_origins = compact([
       var.custom_domain != "" ? "https://${var.custom_domain}" : "",
+      var.custom_domain != "" ? "https://www.${var.custom_domain}" : "",
       var.cloudfront_domain != "" ? "https://${var.cloudfront_domain}" : "",
     ])
-    expose_headers  = ["ETag"] # Minimal exposure
+    expose_headers  = ["ETag", "Content-Length", "Content-Type"] # Expose headers for downloads
     max_age_seconds = 3000
   }
 }

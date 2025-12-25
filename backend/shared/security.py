@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 CLOUDFRONT_SECRET = os.environ.get('CLOUDFRONT_SECRET')
 RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY')
 RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
-RECAPTCHA_MIN_SCORE = 0.5  # Minimum score for valid human interaction
+RECAPTCHA_MIN_SCORE = float(os.environ.get('RECAPTCHA_MIN_SCORE', '0.3'))  # Configurable minimum score
 
 
 def verify_cloudfront_origin(event: dict[str, Any]) -> bool:

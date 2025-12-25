@@ -1,37 +1,5 @@
-# Build Lambda package with shared dependencies
-resource "null_resource" "lambda_build" {
-  triggers = {
-    source_hash = filemd5("${var.source_dir}/handler.py")
-    shared_hash = md5(join("", [for f in fileset("${path.root}/../../../backend/shared", "*.py") : filemd5("${path.root}/../../../backend/shared/${f}")]))
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      mkdir -p ${path.module}/builds
-      rm -rf ${path.module}/builds/${var.function_name}_temp
-      mkdir -p ${path.module}/builds/${var.function_name}_temp
-      cp ${var.source_dir}/handler.py ${path.module}/builds/${var.function_name}_temp/
-      cp -r ${path.root}/../../../backend/shared ${path.module}/builds/${var.function_name}_temp/
-
-      # Install dependencies if requirements.txt exists
-      if [ -f ${var.source_dir}/requirements.txt ]; then
-        pip install -q -r ${var.source_dir}/requirements.txt -t ${path.module}/builds/${var.function_name}_temp/
-      fi
-
-      cd ${path.module}/builds/${var.function_name}_temp
-      zip -r ../${var.function_name}.zip . -x "*.pyc" -x "__pycache__/*"
-      cd ..
-      rm -rf ${var.function_name}_temp
-    EOT
-  }
-}
-
-# Dummy archive file to satisfy Terraform (actual zip created by null_resource)
-data "archive_file" "lambda" {
-  type        = "zip"
-  source_file = "${var.source_dir}/handler.py"
-  output_path = "${path.module}/builds/${var.function_name}_dummy.zip"
-}
+# NOTE: Lambda packages are built by scripts/build-lambdas.sh before Terraform runs
+# The zip files are expected to exist at ${path.module}/builds/${var.function_name}.zip
 
 # IAM role for Lambda execution
 resource "aws_iam_role" "lambda" {
@@ -92,8 +60,6 @@ resource "aws_lambda_function" "main" {
   }
 
   tags = var.tags
-
-  depends_on = [null_resource.lambda_build]
 }
 
 # CloudWatch Log Group

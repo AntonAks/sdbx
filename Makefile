@@ -16,10 +16,16 @@ help: ## Show this help message
 bootstrap: ## Bootstrap Terraform backend (run once)
 	@./scripts/bootstrap-terraform-backend.sh
 
+build-lambdas-dev: ## Build Lambda deployment packages for dev
+	@./scripts/build-lambdas.sh dev
+
+build-lambdas-prod: ## Build Lambda deployment packages for prod
+	@./scripts/build-lambdas.sh prod
+
 deploy-dev: ## Deploy dev environment
 	@./scripts/deploy-dev.sh
 
-deploy-prod: ## Deploy prod environment
+deploy-prod: build-lambdas-prod ## Deploy prod environment
 	@echo "🚀 Deploying to PRODUCTION..."
 	@ACCOUNT_ID=$$(aws sts get-caller-identity --query Account --output text) && \
 		BACKEND_BUCKET="sdbx-terraform-state-$$ACCOUNT_ID" && \
