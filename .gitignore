@@ -89,8 +89,10 @@ Thumbs.db
 *.bak
 *.backup
 
+.claude/*
 terraform/modules/api/builds/layer
 
 ARCHITECTURE.md
 DEPLOYMENT.md
 PROD_DEPLOYMENT.md
+ENHANCEMENT_PLAN.md
