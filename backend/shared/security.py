@@ -92,13 +92,13 @@ def verify_recaptcha(token: str, remote_ip: Optional[str] = None) -> tuple[bool,
         if not result.get('success', False):
             error_codes = result.get('error-codes', [])
             logger.warning(f"reCAPTCHA verification failed: {error_codes}")
-            return False, 0.0, f"reCAPTCHA verification failed: {error_codes}"
+            return False, 0.0, "reCAPTCHA verification failed"
 
         # Check score
         score = result.get('score', 0.0)
         if score < RECAPTCHA_MIN_SCORE:
             logger.warning(f"reCAPTCHA score too low: {score} < {RECAPTCHA_MIN_SCORE}")
-            return False, score, f"Bot activity detected (score: {score})"
+            return False, score, "Bot activity detected"
 
         return True, score, None
 

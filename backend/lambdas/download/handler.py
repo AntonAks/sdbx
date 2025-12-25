@@ -12,9 +12,9 @@ from shared.exceptions import (
     FileNotFoundError,
     ValidationError,
 )
-from shared.json_helper import dumps as json_dumps
+from shared.response import error_response, success_response
 from shared.s3 import generate_download_url
-from shared.security import verify_cloudfront_origin, verify_recaptcha, build_error_response
+from shared.security import verify_cloudfront_origin, verify_recaptcha
 from shared.validation import validate_file_id
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     try:
         # Verify request comes from CloudFront
         if not verify_cloudfront_origin(event):
-            return build_error_response(403, 'Direct API access not allowed')
+            return error_response('Direct API access not allowed', 403)
 
         # Parse request body
         body = json.loads(event.get("body", "{}"))
@@ -47,7 +47,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         if not is_valid:
             logger.warning(f"reCAPTCHA verification failed for download: {error_msg} (score: {score})")
-            return _error_response(403, error_msg or "Bot activity detected")
+            return error_response(error_msg or "Bot activity detected", 403)
 
         logger.info(f"reCAPTCHA verification succeeded for download with score: {score}")
 
@@ -69,51 +69,27 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         logger.info(f"File download initiated: {file_id}")
 
-        return _success_response({
+        return success_response({
             "download_url": download_url,
             "file_size": record["file_size"],
         })
 
     except ValidationError as e:
         logger.warning(f"Validation error: {e}")
-        return _error_response(400, str(e))
+        return error_response(str(e), 400)
 
     except FileNotFoundError as e:
         logger.info(f"File not found: {e}")
-        return _error_response(404, "File not found")
+        return error_response("File not found", 404)
 
     except FileAlreadyDownloadedError as e:
         logger.info(f"File already downloaded: {e}")
-        return _error_response(410, "File already downloaded")
+        return error_response("File already downloaded", 410)
 
     except FileExpiredError as e:
         logger.info(f"File expired: {e}")
-        return _error_response(410, "File expired")
+        return error_response("File expired", 410)
 
     except Exception as e:
         logger.exception("Unexpected error in download")
-        return _error_response(500, "Internal server error")
-
-
-def _success_response(data: dict) -> dict[str, Any]:
-    """Build successful API response."""
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-        },
-        "body": json_dumps(data),
-    }
-
-
-def _error_response(status: int, message: str) -> dict[str, Any]:
-    """Build error API response."""
-    return {
-        "statusCode": status,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-        },
-        "body": json_dumps({"error": message}),
-    }
+        return error_response("Internal server error", 500)

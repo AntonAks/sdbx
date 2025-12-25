@@ -10,8 +10,9 @@ from typing import Any
 
 from shared.dynamo import create_file_record
 from shared.exceptions import ValidationError
+from shared.response import error_response, success_response
 from shared.s3 import generate_upload_url
-from shared.security import verify_cloudfront_origin, verify_recaptcha, build_error_response
+from shared.security import verify_cloudfront_origin, verify_recaptcha
 from shared.validation import validate_file_size, validate_ttl
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     try:
         # Verify request comes from CloudFront
         if not verify_cloudfront_origin(event):
-            return build_error_response(403, 'Direct API access not allowed')
+            return error_response('Direct API access not allowed', 403)
 
         # Parse request body
         body = json.loads(event.get("body", "{}"))
@@ -65,7 +66,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         if not is_valid:
             logger.warning(f"reCAPTCHA verification failed: {error_msg} (score: {score})")
-            return _error_response(403, error_msg or "Bot activity detected")
+            return error_response(error_msg or "Bot activity detected", 403)
 
         logger.info(f"reCAPTCHA verification succeeded with score: {score}")
 
@@ -102,7 +103,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             expires_in=900,
         )
 
-        return _success_response({
+        return success_response({
             "file_id": file_id,
             "upload_url": upload_url,
             "expires_at": expires_at,
@@ -110,32 +111,8 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     except ValidationError as e:
         logger.warning(f"Validation error: {e}")
-        return _error_response(400, str(e))
+        return error_response(str(e), 400)
 
     except Exception as e:
         logger.exception("Unexpected error in upload_init")
-        return _error_response(500, "Internal server error")
-
-
-def _success_response(data: dict) -> dict[str, Any]:
-    """Build successful API response."""
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-        },
-        "body": json.dumps(data),
-    }
-
-
-def _error_response(status: int, message: str) -> dict[str, Any]:
-    """Build error API response."""
-    return {
-        "statusCode": status,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-        },
-        "body": json.dumps({"error": message}),
-    }
+        return error_response("Internal server error", 500)

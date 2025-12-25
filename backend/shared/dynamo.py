@@ -128,13 +128,13 @@ def mark_downloaded(table_name: str, file_id: str) -> dict[str, Any]:
             record = get_file_record(table_name, file_id)
 
             if not record:
-                raise FileNotFoundError(f"File not found: {file_id}")
+                raise FileNotFoundError("File not found")
 
             if record.get("downloaded"):
-                raise FileAlreadyDownloadedError(f"File already downloaded: {file_id}")
+                raise FileAlreadyDownloadedError("File already downloaded")
 
             if record.get("expires_at", 0) <= current_time:
-                raise FileExpiredError(f"File expired: {file_id}")
+                raise FileExpiredError("File has expired")
 
             # Unknown condition failure
             raise

@@ -9,6 +9,7 @@ from typing import Any
 import boto3
 
 from shared.dynamo import delete_file_record, get_table
+from shared.response import error_response, success_response
 from shared.s3 import delete_file
 
 logger = logging.getLogger(__name__)
@@ -81,17 +82,11 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             })
         )
 
-        return {
-            "statusCode": 200,
-            "body": json.dumps({
-                "deleted": deleted_count,
-                "errors": error_count,
-            }),
-        }
+        return success_response({
+            "deleted": deleted_count,
+            "errors": error_count,
+        })
 
     except Exception as e:
         logger.exception("Unexpected error in cleanup")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": "Internal server error"}),
-        }
+        return error_response("Internal server error", 500)

@@ -25,7 +25,7 @@ def validate_file_id(file_id: str) -> None:
         raise ValidationError("File ID is required")
 
     if not UUID_PATTERN.match(file_id.lower()):
-        raise ValidationError(f"Invalid file ID format: {file_id}")
+        raise ValidationError("Invalid file ID format")
 
 
 def validate_file_size(file_size: int) -> None:
@@ -45,9 +45,7 @@ def validate_file_size(file_size: int) -> None:
         raise ValidationError("File size must be positive")
 
     if file_size > MAX_FILE_SIZE:
-        raise ValidationError(
-            f"File size {file_size} exceeds maximum {MAX_FILE_SIZE} bytes (100 MB)"
-        )
+        raise ValidationError("File size exceeds maximum limit (100 MB)")
 
 
 def validate_ttl(ttl: str) -> None:
@@ -61,6 +59,4 @@ def validate_ttl(ttl: str) -> None:
         ValidationError: If TTL is invalid
     """
     if ttl not in ALLOWED_TTL_VALUES:
-        raise ValidationError(
-            f"TTL must be one of {ALLOWED_TTL_VALUES}, got: {ttl}"
-        )
+        raise ValidationError(f"TTL must be one of {ALLOWED_TTL_VALUES}")
