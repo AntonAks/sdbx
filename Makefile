@@ -1,4 +1,4 @@
-.PHONY: help bootstrap deploy-dev deploy-prod destroy-dev destroy-prod destroy-all plan-dev plan-prod init-dev init-prod clean status
+.PHONY: help bootstrap deploy-dev deploy-prod destroy-dev destroy-prod destroy-all plan-dev plan-prod init-dev init-prod clean status test test-backend test-frontend test-backend-cov
 
 # Default target
 help: ## Show this help message
@@ -124,10 +124,39 @@ clean: ## Clean local Terraform files
 	@find terraform/modules/api/modules/lambda/builds -type f -name "*.zip" -delete 2>/dev/null || true
 	@echo "  ✓ Cleaned"
 
-test-backend: ## Test backend Python code
+test: test-backend test-frontend ## Run all tests (backend + frontend)
+
+test-backend: ## Run backend Python tests
+	@echo "🧪 Running backend tests..."
+	@if [ ! -d "backend/venv" ]; then \
+		echo "📦 Creating virtual environment..."; \
+		cd backend && python3 -m venv venv; \
+	fi
 	@cd backend && \
-		pip install -q -r requirements.txt && \
-		pytest tests/ -v
+		. venv/bin/activate && \
+		pip install -q -r requirements-test.txt && \
+		pytest tests/ -v --tb=short
+	@echo ""
+
+test-backend-cov: ## Run backend tests with coverage report
+	@echo "🧪 Running backend tests with coverage..."
+	@if [ ! -d "backend/venv" ]; then \
+		echo "📦 Creating virtual environment..."; \
+		cd backend && python3 -m venv venv; \
+	fi
+	@cd backend && \
+		. venv/bin/activate && \
+		pip install -q -r requirements-test.txt && \
+		pytest tests/ -v --cov=shared --cov-report=term-missing --cov-report=html
+	@echo ""
+	@echo "📊 Coverage report: backend/htmlcov/index.html"
+	@echo ""
+
+test-frontend: ## Run frontend JavaScript tests
+	@echo "🧪 Running frontend tests..."
+	@cd frontend && \
+		node --test tests/*.test.js
+	@echo ""
 
 lint-backend: ## Lint backend Python code
 	@cd backend && \

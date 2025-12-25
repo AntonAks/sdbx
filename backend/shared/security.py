@@ -9,10 +9,8 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-CLOUDFRONT_SECRET = os.environ.get('CLOUDFRONT_SECRET')
-RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY')
+# Constants
 RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
-RECAPTCHA_MIN_SCORE = float(os.environ.get('RECAPTCHA_MIN_SCORE', '0.3'))  # Configurable minimum score
 
 
 def verify_cloudfront_origin(event: dict[str, Any]) -> bool:
@@ -25,7 +23,10 @@ def verify_cloudfront_origin(event: dict[str, Any]) -> bool:
     Returns:
         True if request is from CloudFront, False otherwise
     """
-    if not CLOUDFRONT_SECRET:
+    # Read from env at runtime (not import time) for testability
+    cloudfront_secret = os.environ.get('CLOUDFRONT_SECRET')
+
+    if not cloudfront_secret:
         logger.warning("CLOUDFRONT_SECRET not configured - skipping origin check")
         return True  # Allow in dev if not configured
 
@@ -36,7 +37,7 @@ def verify_cloudfront_origin(event: dict[str, Any]) -> bool:
     # Check for custom header
     origin_verify = headers_lower.get('x-origin-verify', '')
 
-    if origin_verify != CLOUDFRONT_SECRET:
+    if origin_verify != cloudfront_secret:
         source_ip = event.get('requestContext', {}).get('identity', {}).get('sourceIp', 'unknown')
         logger.warning(f"Origin verification failed from IP: {source_ip}")
         return False
@@ -58,7 +59,11 @@ def verify_recaptcha(token: str, remote_ip: Optional[str] = None) -> tuple[bool,
         - score: reCAPTCHA score (0.0 to 1.0)
         - error_message: Error description if validation fails
     """
-    if not RECAPTCHA_SECRET_KEY:
+    # Read from env at runtime (not import time) for testability
+    recaptcha_secret_key = os.environ.get('RECAPTCHA_SECRET_KEY')
+    recaptcha_min_score = float(os.environ.get('RECAPTCHA_MIN_SCORE', '0.3'))
+
+    if not recaptcha_secret_key:
         logger.warning("RECAPTCHA_SECRET_KEY not configured - skipping verification")
         return True, 1.0, None  # Allow in dev if not configured
 
@@ -68,7 +73,7 @@ def verify_recaptcha(token: str, remote_ip: Optional[str] = None) -> tuple[bool,
     try:
         # Verify token with Google
         payload = {
-            'secret': RECAPTCHA_SECRET_KEY,
+            'secret': recaptcha_secret_key,
             'response': token,
         }
         if remote_ip:
@@ -96,8 +101,8 @@ def verify_recaptcha(token: str, remote_ip: Optional[str] = None) -> tuple[bool,
 
         # Check score
         score = result.get('score', 0.0)
-        if score < RECAPTCHA_MIN_SCORE:
-            logger.warning(f"reCAPTCHA score too low: {score} < {RECAPTCHA_MIN_SCORE}")
+        if score < recaptcha_min_score:
+            logger.warning(f"reCAPTCHA score too low: {score} < {recaptcha_min_score}")
             return False, score, "Bot activity detected"
 
         return True, score, None
