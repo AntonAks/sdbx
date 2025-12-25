@@ -14,7 +14,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "SecureDrop"
+      Project     = "sdbx"
       Environment = var.environment
       ManagedBy   = "Terraform"
     }

@@ -1,13 +1,97 @@
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "main" {
   name        = "${var.project_name}-${var.environment}-api"
-  description = "SecureDrop API for file sharing"
+  description = "sdbx API for zero-knowledge file sharing"
 
   endpoint_configuration {
     types = ["REGIONAL"]
   }
 
   tags = var.tags
+}
+
+# Request Validator - validates request body and parameters
+resource "aws_api_gateway_request_validator" "main" {
+  rest_api_id                 = aws_api_gateway_rest_api.main.id
+  name                        = "${var.project_name}-${var.environment}-validator"
+  validate_request_body       = true
+  validate_request_parameters = true
+}
+
+# Request Models - JSON schemas for request validation
+
+# Upload Init Request Model
+resource "aws_api_gateway_model" "upload_request" {
+  rest_api_id  = aws_api_gateway_rest_api.main.id
+  name         = "UploadInitRequest"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "$schema" = "http://json-schema.org/draft-04/schema#"
+    type      = "object"
+    properties = {
+      file_size = {
+        type    = "integer"
+        minimum = 1
+        maximum = var.max_file_size_bytes
+      }
+      ttl = {
+        type = "string"
+        enum = ["1h", "12h", "24h"]
+      }
+      recaptcha_token = {
+        type      = "string"
+        minLength = 10
+        maxLength = 2000
+      }
+    }
+    required = ["file_size", "ttl", "recaptcha_token"]
+  })
+}
+
+# Download Request Model
+resource "aws_api_gateway_model" "download_request" {
+  rest_api_id  = aws_api_gateway_rest_api.main.id
+  name         = "DownloadRequest"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "$schema" = "http://json-schema.org/draft-04/schema#"
+    type      = "object"
+    properties = {
+      recaptcha_token = {
+        type      = "string"
+        minLength = 10
+        maxLength = 2000
+      }
+    }
+    required = ["recaptcha_token"]
+  })
+}
+
+# Report Abuse Request Model
+resource "aws_api_gateway_model" "report_abuse_request" {
+  rest_api_id  = aws_api_gateway_rest_api.main.id
+  name         = "ReportAbuseRequest"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "$schema" = "http://json-schema.org/draft-04/schema#"
+    type      = "object"
+    properties = {
+      reason = {
+        type      = "string"
+        minLength = 1
+        maxLength = 500
+      }
+      recaptcha_token = {
+        type      = "string"
+        minLength = 10
+        maxLength = 2000
+      }
+    }
+    required = ["recaptcha_token"]
+  })
 }
 
 # Lambda Layer for shared dependencies
@@ -124,12 +208,12 @@ module "lambda_upload_init" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    BUCKET_NAME           = var.bucket_name
-    TABLE_NAME            = var.table_name
-    ENVIRONMENT           = var.environment
-    MAX_FILE_SIZE         = var.max_file_size_bytes
-    CLOUDFRONT_SECRET     = var.cloudfront_secret
-    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    MAX_FILE_SIZE        = var.max_file_size_bytes
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [
@@ -165,9 +249,9 @@ module "lambda_get_metadata" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    TABLE_NAME         = var.table_name
-    ENVIRONMENT        = var.environment
-    CLOUDFRONT_SECRET  = var.cloudfront_secret
+    TABLE_NAME        = var.table_name
+    ENVIRONMENT       = var.environment
+    CLOUDFRONT_SECRET = var.cloudfront_secret
   }
 
   iam_policy_statements = [
@@ -195,11 +279,11 @@ module "lambda_download" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    BUCKET_NAME           = var.bucket_name
-    TABLE_NAME            = var.table_name
-    ENVIRONMENT           = var.environment
-    CLOUDFRONT_SECRET     = var.cloudfront_secret
-    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [
@@ -273,10 +357,10 @@ module "lambda_report_abuse" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    TABLE_NAME            = var.table_name
-    ENVIRONMENT           = var.environment
-    CLOUDFRONT_SECRET     = var.cloudfront_secret
-    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [
@@ -296,10 +380,15 @@ module "lambda_report_abuse" {
 # API Gateway Methods
 # POST /upload/init
 resource "aws_api_gateway_method" "upload_init_post" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.upload_init.id
-  http_method   = "POST"
-  authorization = "NONE"
+  rest_api_id          = aws_api_gateway_rest_api.main.id
+  resource_id          = aws_api_gateway_resource.upload_init.id
+  http_method          = "POST"
+  authorization        = "NONE"
+  request_validator_id = aws_api_gateway_request_validator.main.id
+
+  request_models = {
+    "application/json" = aws_api_gateway_model.upload_request.name
+  }
 }
 
 resource "aws_api_gateway_integration" "upload_init" {
@@ -330,10 +419,15 @@ resource "aws_api_gateway_integration" "metadata" {
 
 # POST /files/{file_id}/download
 resource "aws_api_gateway_method" "download_post" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.download.id
-  http_method   = "POST"
-  authorization = "NONE"
+  rest_api_id          = aws_api_gateway_rest_api.main.id
+  resource_id          = aws_api_gateway_resource.download.id
+  http_method          = "POST"
+  authorization        = "NONE"
+  request_validator_id = aws_api_gateway_request_validator.main.id
+
+  request_models = {
+    "application/json" = aws_api_gateway_model.download_request.name
+  }
 }
 
 resource "aws_api_gateway_integration" "download" {
@@ -347,10 +441,15 @@ resource "aws_api_gateway_integration" "download" {
 
 # POST /files/{file_id}/report
 resource "aws_api_gateway_method" "report_post" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.report.id
-  http_method   = "POST"
-  authorization = "NONE"
+  rest_api_id          = aws_api_gateway_rest_api.main.id
+  resource_id          = aws_api_gateway_resource.report.id
+  http_method          = "POST"
+  authorization        = "NONE"
+  request_validator_id = aws_api_gateway_request_validator.main.id
+
+  request_models = {
+    "application/json" = aws_api_gateway_model.report_abuse_request.name
+  }
 }
 
 resource "aws_api_gateway_integration" "report" {
@@ -447,6 +546,21 @@ resource "aws_api_gateway_stage" "main" {
   }
 
   tags = var.tags
+}
+
+# API Gateway Throttling - prevents abuse and controls costs
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.main.stage_name
+  method_path = "*/*" # Apply to all methods
+
+  settings {
+    throttling_burst_limit = var.environment == "prod" ? 5000 : 1000 # Concurrent requests
+    throttling_rate_limit  = var.environment == "prod" ? 2000 : 500  # Requests per second
+    logging_level          = "INFO"
+    data_trace_enabled     = false
+    metrics_enabled        = true
+  }
 }
 
 # CloudWatch Log Group for API Gateway

@@ -55,3 +55,9 @@ variable "acm_certificate_arn" {
   type        = string
   default     = ""
 }
+
+variable "cloudfront_domain_override" {
+  description = "Override CloudFront domain for CORS (use for manual configuration or testing)"
+  type        = string
+  default     = ""
+}

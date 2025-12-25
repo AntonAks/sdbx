@@ -4,14 +4,15 @@ resource "aws_s3_bucket" "files" {
   tags   = merge(var.tags, { Name = "${var.project_name}-${var.environment}-files" })
 }
 
-# Block public access to files bucket (allow CORS)
+# Block ALL public access to files bucket
+# NOTE: Presigned URLs work perfectly with full public access blocking
 resource "aws_s3_bucket_public_access_block" "files" {
   bucket = aws_s3_bucket.files.id
 
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
-  restrict_public_buckets = false  # Must be false for CORS to work with presigned URLs
+  restrict_public_buckets = true # FIXED: Full blocking is secure and works with presigned URLs
 }
 
 # Enable server-side encryption
@@ -25,7 +26,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "files" {
   }
 }
 
-# Lifecycle rule to expire old files
+# Lifecycle rule to expire old files and clean up old versions
 resource "aws_s3_bucket_lifecycle_configuration" "files" {
   bucket = aws_s3_bucket.files.id
 
@@ -35,8 +36,14 @@ resource "aws_s3_bucket_lifecycle_configuration" "files" {
 
     filter {}
 
+    # Delete current version after TTL
     expiration {
       days = var.lifecycle_expiration_days
+    }
+
+    # Delete old versions after 7 days (prevents cost accumulation)
+    noncurrent_version_expiration {
+      noncurrent_days = 7
     }
 
     abort_incomplete_multipart_upload {
@@ -55,14 +62,18 @@ resource "aws_s3_bucket_versioning" "files" {
 }
 
 # CORS configuration for direct browser uploads
+# SECURITY: Only allow uploads from trusted origins (CloudFront or custom domain)
 resource "aws_s3_bucket_cors_configuration" "files" {
   bucket = aws_s3_bucket.files.id
 
   cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["PUT", "POST", "GET", "HEAD"]
-    allowed_origins = ["*"]
-    expose_headers  = ["ETag", "x-amz-server-side-encryption", "x-amz-request-id", "x-amz-id-2"]
+    allowed_headers = ["Content-Type", "x-amz-*"] # Only essential headers
+    allowed_methods = ["PUT"]                     # Only PUT for presigned URL uploads
+    allowed_origins = compact([
+      var.custom_domain != "" ? "https://${var.custom_domain}" : "",
+      var.cloudfront_domain != "" ? "https://${var.cloudfront_domain}" : "",
+    ])
+    expose_headers  = ["ETag"] # Minimal exposure
     max_age_seconds = 3000
   }
 }
@@ -96,9 +107,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "static" {
 
 # DynamoDB table for file metadata
 resource "aws_dynamodb_table" "files" {
-  name           = "${var.project_name}-${var.environment}-files"
-  billing_mode   = "PAY_PER_REQUEST" # On-demand pricing
-  hash_key       = "file_id"
+  name         = "${var.project_name}-${var.environment}-files"
+  billing_mode = "PAY_PER_REQUEST" # On-demand pricing
+  hash_key     = "file_id"
 
   attribute {
     name = "file_id"

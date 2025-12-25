@@ -79,13 +79,13 @@ resource "aws_iam_role_policy" "lambda_custom" {
 resource "aws_lambda_function" "main" {
   filename         = "${path.module}/builds/${var.function_name}.zip"
   function_name    = var.function_name
-  role            = aws_iam_role.lambda.arn
-  handler         = var.handler
+  role             = aws_iam_role.lambda.arn
+  handler          = var.handler
   source_code_hash = filebase64sha256("${path.module}/builds/${var.function_name}.zip")
-  runtime         = var.runtime
-  timeout         = var.timeout
-  memory_size     = var.memory_size
-  layers          = var.layers
+  runtime          = var.runtime
+  timeout          = var.timeout
+  memory_size      = var.memory_size
+  layers           = var.layers
 
   environment {
     variables = var.environment_variables

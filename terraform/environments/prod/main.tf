@@ -16,10 +16,15 @@ resource "random_password" "cloudfront_secret" {
 module "storage" {
   source = "../../modules/storage"
 
-  project_name  = var.project_name
-  environment   = var.environment
-  custom_domain = var.custom_domain
-  tags          = local.common_tags
+  project_name = var.project_name
+  environment  = var.environment
+  tags         = local.common_tags
+
+  # CORS Security: Pass CloudFront domain from CDN module
+  # NOTE: On first apply, cloudfront_domain will be empty (CORS allows nothing)
+  # On second apply, it will be populated with the actual CloudFront domain
+  cloudfront_domain = var.cloudfront_domain_override != "" ? var.cloudfront_domain_override : try(module.cdn.cloudfront_domain, "")
+  custom_domain     = var.custom_domain
 }
 
 # API Module - API Gateway and Lambda functions

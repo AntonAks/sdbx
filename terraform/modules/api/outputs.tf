@@ -27,10 +27,10 @@ output "lambda_function_names" {
 output "lambda_function_arns" {
   description = "Map of Lambda function ARNs"
   value = {
-    upload_init   = module.lambda_upload_init.arn
-    get_metadata  = module.lambda_get_metadata.arn
-    download      = module.lambda_download.arn
-    cleanup       = module.lambda_cleanup.arn
-    report_abuse  = module.lambda_report_abuse.arn
+    upload_init  = module.lambda_upload_init.arn
+    get_metadata = module.lambda_get_metadata.arn
+    download     = module.lambda_download.arn
+    cleanup      = module.lambda_cleanup.arn
+    report_abuse = module.lambda_report_abuse.arn
   }
 }

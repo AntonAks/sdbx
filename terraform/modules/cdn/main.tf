@@ -46,7 +46,7 @@ resource "aws_cloudfront_distribution" "main" {
   origin {
     domain_name = replace(replace(replace(var.api_endpoint, "https://", ""), "/dev", ""), "/prod", "")
     origin_id   = "API-Gateway"
-    origin_path = ""  # No prefix - frontend includes /prod or /dev in path
+    origin_path = "" # No prefix - frontend includes /prod or /dev in path
 
     custom_origin_config {
       http_port              = 80
@@ -78,8 +78,8 @@ resource "aws_cloudfront_distribution" "main" {
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 3600   # 1 hour
-    max_ttl                = 86400  # 24 hours
+    default_ttl            = 3600  # 1 hour
+    max_ttl                = 86400 # 24 hours
     compress               = true
   }
 
@@ -100,8 +100,8 @@ resource "aws_cloudfront_distribution" "main" {
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 300    # 5 minutes
-    max_ttl                = 3600   # 1 hour
+    default_ttl            = 300  # 5 minutes
+    max_ttl                = 3600 # 1 hour
     compress               = true
   }
 
@@ -122,7 +122,7 @@ resource "aws_cloudfront_distribution" "main" {
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 86400   # 24 hours
+    default_ttl            = 86400    # 24 hours
     max_ttl                = 31536000 # 1 year
     compress               = true
   }
@@ -145,7 +145,7 @@ resource "aws_cloudfront_distribution" "main" {
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 0  # Don't cache API responses
+    default_ttl            = 0 # Don't cache API responses
     max_ttl                = 0
     compress               = true
   }
@@ -168,7 +168,7 @@ resource "aws_cloudfront_distribution" "main" {
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 0  # Don't cache API responses
+    default_ttl            = 0 # Don't cache API responses
     max_ttl                = 0
     compress               = true
   }

@@ -39,7 +39,7 @@ variable "custom_domain" {
 }
 
 variable "cloudfront_domain" {
-  description = "CloudFront domain name for CORS configuration"
+  description = "CloudFront domain name for CORS configuration (leave empty for initial deployment)"
   type        = string
   default     = ""
 }

@@ -30,34 +30,48 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         error_count = 0
         current_time = int(time.time())
 
-        # Scan for expired files
+        # Scan for expired files with pagination
         # Note: In production, consider using a GSI on expires_at for efficiency
         table = get_table(TABLE_NAME)
-        response = table.scan()
 
-        for item in response.get("Items", []):
-            file_id = item["file_id"]
-            s3_key = item["s3_key"]
-            expires_at = item.get("expires_at", 0)
-            downloaded = item.get("downloaded", False)
+        # Paginate through all items (DynamoDB scan returns max 1MB per request)
+        last_evaluated_key = None
 
-            # Delete if expired or already downloaded
-            should_delete = expires_at <= current_time or downloaded
+        while True:
+            # Scan with pagination support
+            if last_evaluated_key:
+                response = table.scan(ExclusiveStartKey=last_evaluated_key)
+            else:
+                response = table.scan()
 
-            if should_delete:
-                try:
-                    # Delete from S3
-                    delete_file(BUCKET_NAME, s3_key)
+            for item in response.get("Items", []):
+                file_id = item["file_id"]
+                s3_key = item["s3_key"]
+                expires_at = item.get("expires_at", 0)
+                downloaded = item.get("downloaded", False)
 
-                    # Delete from DynamoDB
-                    delete_file_record(TABLE_NAME, file_id)
+                # Delete if expired or already downloaded
+                should_delete = expires_at <= current_time or downloaded
 
-                    deleted_count += 1
-                    logger.info(f"Cleaned up file: {file_id}")
+                if should_delete:
+                    try:
+                        # Delete from S3
+                        delete_file(BUCKET_NAME, s3_key)
 
-                except Exception as e:
-                    error_count += 1
-                    logger.error(f"Error cleaning up {file_id}: {e}")
+                        # Delete from DynamoDB
+                        delete_file_record(TABLE_NAME, file_id)
+
+                        deleted_count += 1
+                        logger.info(f"Cleaned up file: {file_id}")
+
+                    except Exception as e:
+                        error_count += 1
+                        logger.error(f"Error cleaning up {file_id}: {e}")
+
+            # Check if there are more items to scan
+            last_evaluated_key = response.get("LastEvaluatedKey")
+            if not last_evaluated_key:
+                break  # No more items to scan
 
         logger.info(
             json.dumps({
