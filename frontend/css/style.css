@@ -51,13 +51,22 @@ header {
 }
 
 header h1 {
-    font-size: 2.5rem;
+    font-size: 3rem;
     margin-bottom: 0.5rem;
 }
 
 .tagline {
     font-size: 1.1rem;
     opacity: 0.9;
+    font-weight: 600;
+}
+
+.stats {
+    font-size: 1.3rem;
+    opacity: 0.95;
+    margin-top: 1rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
 }
 
 main {

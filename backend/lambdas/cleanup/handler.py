@@ -47,6 +47,11 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
             for item in response.get("Items", []):
                 file_id = item["file_id"]
+
+                # Skip special records (statistics, etc.)
+                if file_id == "STATS":
+                    continue
+
                 s3_key = item["s3_key"]
                 expires_at = item.get("expires_at", 0)
                 downloaded = item.get("downloaded", False)

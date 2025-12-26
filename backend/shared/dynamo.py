@@ -188,3 +188,78 @@ def delete_file_record(table_name: str, file_id: str) -> None:
     except ClientError as e:
         logger.error(f"Error deleting file record {file_id}: {e}")
         raise
+
+
+def increment_download_counter(table_name: str, file_size: int = 0) -> dict[str, Any]:
+    """
+    Atomically increment global download counter and total bytes.
+
+    Uses a special statistics record with file_id="STATS" to track
+    aggregate metrics without compromising user privacy.
+
+    Args:
+        table_name: DynamoDB table name
+        file_size: Size of downloaded file in bytes
+
+    Returns:
+        Updated statistics (downloads, total_bytes)
+    """
+    table = get_table(table_name)
+
+    try:
+        response = table.update_item(
+            Key={"file_id": "STATS"},
+            UpdateExpression="ADD downloads :inc, total_bytes :size SET updated_at = :now",
+            ExpressionAttributeValues={
+                ":inc": 1,
+                ":size": file_size,
+                ":now": datetime.utcnow().isoformat(),
+            },
+            ReturnValues="ALL_NEW",
+        )
+        stats = response["Attributes"]
+        logger.info(
+            f"Incremented stats: downloads={stats.get('downloads', 0)}, "
+            f"total_bytes={stats.get('total_bytes', 0)}"
+        )
+        return {
+            "downloads": int(stats.get("downloads", 0)),
+            "total_bytes": int(stats.get("total_bytes", 0)),
+        }
+
+    except ClientError as e:
+        logger.error(f"Error incrementing download counter: {e}")
+        raise
+
+
+def get_statistics(table_name: str) -> dict[str, Any]:
+    """
+    Get global statistics.
+
+    Args:
+        table_name: DynamoDB table name
+
+    Returns:
+        Statistics dictionary with download count, total bytes, and other metrics
+    """
+    table = get_table(table_name)
+
+    try:
+        response = table.get_item(Key={"file_id": "STATS"})
+        stats = response.get("Item", {})
+
+        # Return statistics with defaults
+        return {
+            "downloads": int(stats.get("downloads", 0)),
+            "total_bytes": int(stats.get("total_bytes", 0)),
+            "updated_at": stats.get("updated_at", datetime.utcnow().isoformat()),
+        }
+
+    except ClientError as e:
+        logger.error(f"Error getting statistics: {e}")
+        # Return default stats if error
+        return {
+            "downloads": 0,
+            "total_bytes": 0,
+            "updated_at": datetime.utcnow().isoformat(),
+        }

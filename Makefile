@@ -25,7 +25,7 @@ build-lambdas-prod: ## Build Lambda deployment packages for prod
 deploy-dev: ## Deploy dev environment
 	@./scripts/deploy-dev.sh
 
-deploy-prod: build-lambdas-prod ## Deploy prod environment
+deploy-prod: build-lambdas-prod ## Deploy prod environment (backend + frontend)
 	@echo "🚀 Deploying to PRODUCTION..."
 	@ACCOUNT_ID=$$(aws sts get-caller-identity --query Account --output text) && \
 		BACKEND_BUCKET="sdbx-terraform-state-$$ACCOUNT_ID" && \
@@ -36,7 +36,15 @@ deploy-prod: build-lambdas-prod ## Deploy prod environment
 		echo "" && \
 		read -p "Apply to PRODUCTION? (yes/no): " confirm && \
 		if [ "$$confirm" = "yes" ]; then \
-			terraform apply tfplan && rm -f tfplan; \
+			terraform apply tfplan && rm -f tfplan && \
+			echo "" && \
+			echo "📦 Deploying frontend..." && \
+			cd ../../.. && \
+			BUCKET=$$(cd terraform/environments/prod && terraform output -raw static_bucket_name) && \
+			aws s3 sync frontend/ s3://$$BUCKET/ --delete && \
+			DIST_ID=$$(cd terraform/environments/prod && terraform output -raw cloudfront_distribution_id) && \
+			aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+			echo "✅ Deployment complete!"; \
 		else \
 			echo "❌ Aborted" && rm -f tfplan; \
 		fi

@@ -17,6 +17,7 @@ BUILDS_DIR="$PROJECT_ROOT/terraform/modules/api/modules/lambda/builds"
 LAMBDAS=(
   "upload_init:upload-init"
   "get_metadata:get-metadata"
+  "get_stats:get-stats"
   "download:download"
   "cleanup:cleanup"
   "report_abuse:report-abuse"

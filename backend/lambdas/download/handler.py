@@ -5,7 +5,7 @@ import os
 from typing import Any
 
 from shared.constants import DOWNLOAD_URL_EXPIRY_SECONDS
-from shared.dynamo import mark_downloaded
+from shared.dynamo import increment_download_counter, mark_downloaded
 from shared.exceptions import (
     FileAlreadyDownloadedError,
     FileExpiredError,
@@ -45,6 +45,13 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         # Atomically mark as downloaded
         record = mark_downloaded(TABLE_NAME, file_id)
+
+        # Increment global download counter and total bytes
+        try:
+            increment_download_counter(TABLE_NAME, file_size=record["file_size"])
+        except Exception as e:
+            # Don't fail the download if counter increment fails
+            logger.warning(f"Failed to increment download counter: {e}")
 
         # Generate presigned download URL
         download_url = generate_download_url(

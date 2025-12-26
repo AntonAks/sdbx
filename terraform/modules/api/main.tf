@@ -166,6 +166,12 @@ resource "aws_api_gateway_resource" "report" {
   path_part   = "report"
 }
 
+resource "aws_api_gateway_resource" "stats" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "stats"
+}
+
 # CORS configuration for all resources
 module "cors_upload_init" {
   source = "./modules/cors"
@@ -193,6 +199,13 @@ module "cors_report" {
 
   api_id      = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.report.id
+}
+
+module "cors_stats" {
+  source = "./modules/cors"
+
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.stats.id
 }
 
 # Lambda Functions
@@ -377,6 +390,36 @@ module "lambda_report_abuse" {
   tags = var.tags
 }
 
+module "lambda_get_stats" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-get-stats"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/get_stats"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    TABLE_NAME        = var.table_name
+    ENVIRONMENT       = var.environment
+    CLOUDFRONT_SECRET = var.cloudfront_secret
+  }
+
+  iam_policy_statements = [
+    {
+      effect = "Allow"
+      actions = [
+        "dynamodb:GetItem"
+      ]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
 # API Gateway Methods
 # POST /upload/init
 resource "aws_api_gateway_method" "upload_init_post" {
@@ -461,6 +504,23 @@ resource "aws_api_gateway_integration" "report" {
   uri                     = module.lambda_report_abuse.invoke_arn
 }
 
+# GET /stats
+resource "aws_api_gateway_method" "stats_get" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.stats.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "stats" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.stats.id
+  http_method             = aws_api_gateway_method.stats_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_get_stats.invoke_arn
+}
+
 # Lambda permissions for API Gateway
 resource "aws_lambda_permission" "upload_init" {
   statement_id  = "AllowAPIGatewayInvoke"
@@ -494,6 +554,14 @@ resource "aws_lambda_permission" "report" {
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "stats" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_get_stats.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.main.id
@@ -509,6 +577,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.download.id,
       aws_api_gateway_method.report_post.id,
       aws_api_gateway_integration.report.id,
+      aws_api_gateway_method.stats_get.id,
+      aws_api_gateway_integration.stats.id,
     ]))
   }
 
@@ -521,6 +591,7 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_integration.metadata,
     aws_api_gateway_integration.download,
     aws_api_gateway_integration.report,
+    aws_api_gateway_integration.stats,
   ]
 }
 
