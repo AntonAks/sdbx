@@ -5,11 +5,12 @@ import os
 from typing import Any
 
 from shared.constants import DOWNLOAD_URL_EXPIRY_SECONDS
-from shared.dynamo import increment_download_counter, mark_downloaded
+from shared.dynamo import reserve_download
 from shared.exceptions import (
     FileAlreadyDownloadedError,
     FileExpiredError,
     FileNotFoundError,
+    FileReservedError,
     ValidationError,
 )
 from shared.request_helpers import get_path_parameter
@@ -29,15 +30,15 @@ TABLE_NAME = os.environ.get("TABLE_NAME")
 @require_cloudfront_and_recaptcha
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
-    Mark file or text secret as downloaded and return content.
+    Reserve file or text secret for download and return content.
 
     Security verification (CloudFront origin + reCAPTCHA) is handled by decorator.
 
     For files: Returns presigned S3 download URL
     For text: Returns encrypted text directly
 
-    This uses atomic DynamoDB conditional update to ensure
-    each item can only be downloaded once.
+    This uses atomic DynamoDB conditional update to reserve the download.
+    The frontend must call /confirm endpoint after successful download.
     """
     try:
         # Extract file ID from path
@@ -46,22 +47,15 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         # Validate input
         validate_file_id(file_id)
 
-        # Atomically mark as downloaded
-        record = mark_downloaded(TABLE_NAME, file_id)
-
-        # Increment global download counter and total bytes
-        try:
-            increment_download_counter(TABLE_NAME, file_size=record["file_size"])
-        except Exception as e:
-            # Don't fail the download if counter increment fails
-            logger.warning(f"Failed to increment download counter: {e}")
+        # Atomically reserve for download
+        record = reserve_download(TABLE_NAME, file_id)
 
         # Check content type and return appropriate response
         content_type = record.get("content_type", "file")
 
         if content_type == "text":
             # Text secret - return encrypted text directly
-            logger.info(f"Text secret download initiated: file_id={file_id}, score={event.get('_recaptcha_score', 'N/A')}")
+            logger.info(f"Text secret download reserved: file_id={file_id}, score={event.get('_recaptcha_score', 'N/A')}")
 
             return success_response({
                 "content_type": "text",
@@ -77,7 +71,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 expires_in=DOWNLOAD_URL_EXPIRY_SECONDS,
             )
 
-            logger.info(f"File download initiated: file_id={file_id}, score={event.get('_recaptcha_score', 'N/A')}")
+            logger.info(f"File download reserved: file_id={file_id}, score={event.get('_recaptcha_score', 'N/A')}")
 
             return success_response({
                 "content_type": "file",
@@ -92,6 +86,10 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     except FileNotFoundError as e:
         logger.info(f"File not found: {e}")
         return error_response("File not found", 404)
+
+    except FileReservedError as e:
+        logger.info(f"File currently reserved: {e}")
+        return error_response("File is currently being downloaded", 409)
 
     except FileAlreadyDownloadedError as e:
         logger.info(f"File already downloaded: {e}")

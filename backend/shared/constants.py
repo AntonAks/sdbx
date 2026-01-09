@@ -19,6 +19,9 @@ ALLOWED_TTL_VALUES: Final[tuple[str, ...]] = ("1h", "12h", "24h")
 UPLOAD_URL_EXPIRY_SECONDS: Final[int] = 900  # 15 minutes
 DOWNLOAD_URL_EXPIRY_SECONDS: Final[int] = 300  # 5 minutes
 
+# Download reservation timeout (in seconds)
+DOWNLOAD_RESERVATION_TIMEOUT: Final[int] = 600  # 10 minutes
+
 # Abuse reporting
 AUTO_DELETE_THRESHOLD: Final[int] = 3  # Number of reports before auto-delete
 

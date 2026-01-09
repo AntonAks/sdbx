@@ -8,7 +8,13 @@ from typing import Any, Optional
 import boto3
 from botocore.exceptions import ClientError
 
-from .exceptions import FileAlreadyDownloadedError, FileExpiredError, FileNotFoundError
+from .constants import DOWNLOAD_RESERVATION_TIMEOUT
+from .exceptions import (
+    FileAlreadyDownloadedError,
+    FileExpiredError,
+    FileNotFoundError,
+    FileReservedError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +103,78 @@ def get_file_record(table_name: str, file_id: str) -> Optional[dict[str, Any]]:
         return None
 
 
+def reserve_download(table_name: str, file_id: str) -> dict[str, Any]:
+    """
+    Atomically reserve file for download using conditional update.
+
+    This prevents race conditions when multiple users try to download simultaneously.
+    A reservation is valid for DOWNLOAD_RESERVATION_TIMEOUT seconds (10 minutes).
+    If a previous reservation has expired, a new reservation can be made.
+
+    Args:
+        table_name: DynamoDB table name
+        file_id: File ID
+
+    Returns:
+        File record with reservation timestamp
+
+    Raises:
+        FileReservedError: If file is currently reserved for download
+        FileAlreadyDownloadedError: If file was already downloaded
+        FileExpiredError: If file has expired
+        FileNotFoundError: If file doesn't exist
+    """
+    table = get_table(table_name)
+    current_time = int(time.time())
+    reservation_cutoff = current_time - DOWNLOAD_RESERVATION_TIMEOUT
+
+    try:
+        response = table.update_item(
+            Key={"file_id": file_id},
+            UpdateExpression="SET reserved_at = :now",
+            ConditionExpression=(
+                "downloaded = :false AND expires_at > :current AND "
+                "(attribute_not_exists(reserved_at) OR reserved_at < :cutoff)"
+            ),
+            ExpressionAttributeValues={
+                ":false": False,
+                ":now": current_time,
+                ":current": current_time,
+                ":cutoff": reservation_cutoff,
+            },
+            ReturnValues="ALL_NEW",
+        )
+        logger.info(f"Reserved file for download: {file_id}")
+        return response["Attributes"]
+
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+
+        if error_code == "ConditionalCheckFailedException":
+            # Check why reservation failed
+            record = get_file_record(table_name, file_id)
+
+            if not record:
+                raise FileNotFoundError("File not found")
+
+            if record.get("downloaded"):
+                raise FileAlreadyDownloadedError("File already downloaded")
+
+            if record.get("expires_at", 0) <= current_time:
+                raise FileExpiredError("File has expired")
+
+            # File is currently reserved (reservation not expired yet)
+            reserved_at = record.get("reserved_at", 0)
+            if reserved_at >= reservation_cutoff:
+                raise FileReservedError("File is currently being downloaded")
+
+            # Unknown condition failure
+            raise
+
+        logger.error(f"Error reserving file for download {file_id}: {e}")
+        raise
+
+
 def mark_downloaded(table_name: str, file_id: str) -> dict[str, Any]:
     """
     Atomically mark file as downloaded using conditional update.
@@ -154,6 +232,72 @@ def mark_downloaded(table_name: str, file_id: str) -> dict[str, Any]:
             raise
 
         logger.error(f"Error marking file as downloaded {file_id}: {e}")
+        raise
+
+
+def confirm_download(table_name: str, file_id: str) -> dict[str, Any]:
+    """
+    Confirm successful download and mark file as downloaded.
+
+    This should be called after the frontend successfully downloads and decrypts the file.
+    It marks the file as downloaded and increments global statistics.
+
+    Args:
+        table_name: DynamoDB table name
+        file_id: File ID
+
+    Returns:
+        Updated file record
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        FileAlreadyDownloadedError: If file was already confirmed as downloaded
+    """
+    table = get_table(table_name)
+    current_time = int(time.time())
+
+    try:
+        response = table.update_item(
+            Key={"file_id": file_id},
+            UpdateExpression="SET downloaded = :true, downloaded_at = :now",
+            ConditionExpression="downloaded = :false AND attribute_exists(reserved_at)",
+            ExpressionAttributeValues={
+                ":true": True,
+                ":false": False,
+                ":now": datetime.utcnow().isoformat(),
+            },
+            ReturnValues="ALL_NEW",
+        )
+        record = response["Attributes"]
+        logger.info(f"Confirmed download for file: {file_id}")
+
+        # Increment global download counter
+        try:
+            increment_download_counter(table_name, file_size=record.get("file_size", 0))
+        except Exception as e:
+            # Don't fail confirmation if counter increment fails
+            logger.warning(f"Failed to increment download counter: {e}")
+
+        return record
+
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+
+        if error_code == "ConditionalCheckFailedException":
+            # Check why confirmation failed
+            record = get_file_record(table_name, file_id)
+
+            if not record:
+                raise FileNotFoundError("File not found")
+
+            if record.get("downloaded"):
+                raise FileAlreadyDownloadedError("File already confirmed as downloaded")
+
+            # No reservation exists - shouldn't happen in normal flow
+            logger.warning(f"Confirmation attempted without reservation: {file_id}")
+            raise FileNotFoundError("No active download reservation found")
+
+        logger.error(f"Error confirming download for {file_id}: {e}")
         raise
 
 

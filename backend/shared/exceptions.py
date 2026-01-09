@@ -24,3 +24,8 @@ class FileAlreadyDownloadedError(SdbxError):
 class FileExpiredError(SdbxError):
     """File has expired."""
     pass
+
+
+class FileReservedError(SdbxError):
+    """File is currently reserved for download."""
+    pass

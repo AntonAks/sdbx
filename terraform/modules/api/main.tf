@@ -169,6 +169,12 @@ resource "aws_api_gateway_resource" "download" {
   path_part   = "download"
 }
 
+resource "aws_api_gateway_resource" "confirm" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.file.id
+  path_part   = "confirm"
+}
+
 resource "aws_api_gateway_resource" "report" {
   rest_api_id = aws_api_gateway_rest_api.main.id
   parent_id   = aws_api_gateway_resource.file.id
@@ -201,6 +207,13 @@ module "cors_download" {
 
   api_id      = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.download.id
+}
+
+module "cors_confirm" {
+  source = "./modules/cors"
+
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.confirm.id
 }
 
 module "cors_report" {
@@ -316,6 +329,37 @@ module "lambda_download" {
       ]
       resources = ["${var.bucket_arn}/*"]
     },
+    {
+      effect = "Allow"
+      actions = [
+        "dynamodb:UpdateItem",
+        "dynamodb:GetItem"
+      ]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
+module "lambda_confirm_download" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-confirm-download"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/confirm_download"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    TABLE_NAME        = var.table_name
+    ENVIRONMENT       = var.environment
+    CLOUDFRONT_SECRET = var.cloudfront_secret
+  }
+
+  iam_policy_statements = [
     {
       effect = "Allow"
       actions = [
@@ -492,6 +536,23 @@ resource "aws_api_gateway_integration" "download" {
   uri                     = module.lambda_download.invoke_arn
 }
 
+# POST /files/{file_id}/confirm
+resource "aws_api_gateway_method" "confirm_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.confirm.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "confirm" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.confirm.id
+  http_method             = aws_api_gateway_method.confirm_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_confirm_download.invoke_arn
+}
+
 # POST /files/{file_id}/report
 resource "aws_api_gateway_method" "report_post" {
   rest_api_id          = aws_api_gateway_rest_api.main.id
@@ -556,6 +617,14 @@ resource "aws_lambda_permission" "download" {
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "confirm_download" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_confirm_download.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
 resource "aws_lambda_permission" "report" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
@@ -585,12 +654,14 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.metadata.id,
       aws_api_gateway_method.download_post.id,
       aws_api_gateway_integration.download.id,
+      aws_api_gateway_method.confirm_post.id,
+      aws_api_gateway_integration.confirm.id,
       aws_api_gateway_method.report_post.id,
       aws_api_gateway_integration.report.id,
       aws_api_gateway_method.stats_get.id,
       aws_api_gateway_integration.stats.id,
       # Force redeployment - increment this number when needed
-      "v2",
+      "v3",
     ]))
   }
 

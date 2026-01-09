@@ -7,7 +7,7 @@
 - **Client-side encryption** - Files and text are encrypted in your browser before upload (AES-256-GCM)
 - **Text secrets** - Share encrypted text snippets (up to 1000 characters) without files
 - **File sharing** - Upload files up to 500MB with secure encryption
-- **One-time access** - Each file/text can only be viewed once, then it's automatically deleted
+- **One-time access** - Each file/text can only be viewed once, then it's automatically deleted (with network failure protection)
 - **Zero-knowledge** - The server never sees your encryption keys or unencrypted content
 - **No registration** - No accounts, no email, no tracking
 - **Self-destructing** - Content expires after 1, 12, or 24 hours
@@ -39,16 +39,21 @@
 1. Open the shared link
 2. Your browser extracts the decryption key from the URL fragment
 3. Click to view/download (warning: this works only once!)
-4. Content is decrypted in your browser:
+4. **Download reserved** - Server reserves the content for your download (10-minute window)
+5. Content is downloaded and decrypted in your browser:
    - **Files**: Downloaded and saved with original filename
    - **Text**: Displayed in a copyable text area
-5. Content is automatically deleted from the server
-6. The link becomes invalid forever
+6. **Download confirmed** - Your browser confirms successful download to the server
+7. Content is automatically deleted from the server
+8. The link becomes invalid forever
+
+**Network Failure Protection**: If your download is interrupted (network error, browser crash), you have 10 minutes to retry using the same link. This ensures you don't lose access due to temporary technical issues while maintaining one-time download security.
 
 ## Security
 
 - **Encryption**: AES-256-GCM with 256-bit keys
 - **Zero-knowledge**: Decryption keys and filenames stay in URL fragments, never sent to server
+- **Two-phase download**: Reservation system prevents data loss from network failures while maintaining one-time access
 - **Bot protection**: Google reCAPTCHA v3 with invisible verification (deployed)
 - **Origin verification**: CloudFront custom header blocks direct API access (deployed)
 - **Atomic operations**: Race condition prevention using conditional database updates
@@ -74,18 +79,18 @@ See [SECURITY_PLAN.md](./SECURITY_PLAN.md) for complete security implementation 
 
 ## Limitations
 
-- Maximum file size: 100 MB
+- Maximum file size: 500 MB
 - Files expire after max 24 hours
-- Each file can only be downloaded once
+- Each file can only be downloaded once (with 10-minute retry window for network failures)
 - Desktop browsers recommended (mobile support coming soon)
 
 ## Technology
 
 - **Frontend**: Vanilla JavaScript, Web Crypto API
-- **Backend**: AWS Lambda (Python 3.12), API Gateway
-- **Storage**: S3 (encrypted files), DynamoDB (metadata)
+- **Backend**: AWS Lambda (7 functions, Python 3.12), API Gateway
+- **Storage**: S3 (encrypted files), DynamoDB (metadata + statistics)
 - **CDN**: CloudFront
-- **Infrastructure**: Terraform
+- **Infrastructure**: Terraform (Infrastructure as Code)
 
 ## Development
 

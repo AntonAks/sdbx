@@ -205,6 +205,9 @@ async function handleDownload() {
             updateProgress(100, 'Complete!');
             showTextSecret(decryptedText);
 
+            // Confirm successful download
+            await confirmDownload();
+
         } else {
             // Handle file download
             updateProgress(30, 'Downloading encrypted file...');
@@ -231,6 +234,9 @@ async function handleDownload() {
             // Show success
             updateProgress(100, 'Download complete!');
             showSuccess();
+
+            // Confirm successful download
+            await confirmDownload();
         }
 
     } catch (error) {
@@ -269,6 +275,30 @@ async function requestDownload() {
     }
 
     return response.json();
+}
+
+/**
+ * Confirm successful download to backend
+ */
+async function confirmDownload() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/files/${fileId}/confirm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (response.ok) {
+            console.log('Download confirmed successfully');
+        } else {
+            // Log but don't fail the download - user already has the content
+            console.warn('Failed to confirm download:', response.status);
+        }
+    } catch (error) {
+        // Log but don't fail the download - user already has the content
+        console.warn('Error confirming download:', error);
+    }
 }
 
 /**
