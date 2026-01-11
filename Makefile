@@ -22,8 +22,38 @@ build-lambdas-dev: ## Build Lambda deployment packages for dev
 build-lambdas-prod: ## Build Lambda deployment packages for prod
 	@./scripts/build-lambdas.sh prod
 
-deploy-dev: ## Deploy dev environment
+deploy-dev-infra: build-lambdas-dev ## Deploy dev infrastructure only (without frontend)
 	@./scripts/deploy-dev.sh
+
+deploy-dev: build-lambdas-dev ## Deploy dev environment (backend + frontend)
+	@echo "🚀 Deploying to DEVELOPMENT..."
+	@echo ""
+	@ACCOUNT_ID=$$(aws sts get-caller-identity --query Account --output text) && \
+		BACKEND_BUCKET="sdbx-terraform-state-$$ACCOUNT_ID" && \
+		cd terraform/environments/dev && \
+		cp -n terraform.tfvars.example terraform.tfvars 2>/dev/null || true && \
+		terraform init -backend-config="bucket=$$BACKEND_BUCKET" && \
+		terraform validate && \
+		terraform plan -out=tfplan && \
+		echo "" && \
+		read -p "Apply to DEVELOPMENT? (yes/no): " confirm && \
+		if [ "$$confirm" = "yes" ]; then \
+			terraform apply tfplan && rm -f tfplan && \
+			echo "" && \
+			echo "📦 Deploying frontend..." && \
+			cd ../../.. && \
+			BUCKET=$$(cd terraform/environments/dev && terraform output -raw static_bucket_name) && \
+			aws s3 sync frontend/ s3://$$BUCKET/ --delete && \
+			DIST_ID=$$(cd terraform/environments/dev && terraform output -raw cloudfront_distribution_id) && \
+			aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+			echo "" && \
+			echo "✅ Deployment complete!" && \
+			echo "" && \
+			echo "📊 Outputs:" && \
+			cd terraform/environments/dev && terraform output; \
+		else \
+			echo "❌ Aborted" && rm -f tfplan; \
+		fi
 
 deploy-prod: build-lambdas-prod ## Deploy prod environment (backend + frontend)
 	@echo "🚀 Deploying to PRODUCTION..."
