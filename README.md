@@ -339,7 +339,7 @@ The only data we store is:
 
 ## Contributing
 
-Contributions welcome! Please read our contribution guidelines first.
+Contributions welcome! Please read our [contribution guidelines](./CONTRIBUTING.md) first.
 
 ### How to Contribute
 
@@ -392,4 +392,4 @@ Special thanks to:
 
 - 🐛 [Report a Bug](https://github.com/antonaks/sdbx/issues)
 - 💡 [Request a Feature](https://github.com/antonaks/sdbx/issues)
-- 🔒 [Report Security Issue](https://github.com/antonaks/sdbx/security)
+- 🔒 [Report Security Issue](./SECURITY.md)
