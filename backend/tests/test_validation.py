@@ -85,12 +85,12 @@ class TestValidateFileSize:
         validate_file_size(1024 * 1024)  # 1 MB
 
     def test_valid_max_file(self):
-        """Should accept exactly 100 MB."""
-        validate_file_size(100 * 1024 * 1024)  # Exactly 100 MB
+        """Should accept exactly 500 MB."""
+        validate_file_size(500 * 1024 * 1024)  # Exactly 500 MB
 
     def test_valid_near_max_file(self):
         """Should accept file just under limit."""
-        validate_file_size(100 * 1024 * 1024 - 1)  # 100 MB - 1 byte
+        validate_file_size(500 * 1024 * 1024 - 1)  # 500 MB - 1 byte
 
     def test_reject_zero(self):
         """Should reject zero size."""
@@ -108,9 +108,9 @@ class TestValidateFileSize:
             validate_file_size(-1000000)
 
     def test_reject_too_large(self):
-        """Should reject file over 100 MB."""
+        """Should reject file over 500 MB."""
         with pytest.raises(ValidationError, match="exceeds maximum limit"):
-            validate_file_size(100 * 1024 * 1024 + 1)
+            validate_file_size(500 * 1024 * 1024 + 1)
 
     def test_reject_way_too_large(self):
         """Should reject very large file."""
@@ -138,7 +138,7 @@ class TestValidateFileSize:
         except ValidationError as e:
             # Error message should NOT contain the actual size
             assert str(huge_size) not in str(e)
-            assert "100 MB" in str(e)  # Generic limit is OK
+            assert "500 MB" in str(e)  # Generic limit is OK
 
 
 class TestValidateTTL:
@@ -193,12 +193,12 @@ class TestValidationEdgeCases:
 
     def test_file_size_boundary_minus_one(self):
         """Test exact boundary - 1."""
-        max_size = 100 * 1024 * 1024
+        max_size = 500 * 1024 * 1024
         validate_file_size(max_size - 1)  # Should pass
 
     def test_file_size_boundary_plus_one(self):
         """Test exact boundary + 1."""
-        max_size = 100 * 1024 * 1024
+        max_size = 500 * 1024 * 1024
         with pytest.raises(ValidationError):
             validate_file_size(max_size + 1)  # Should fail
 

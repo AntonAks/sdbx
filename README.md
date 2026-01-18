@@ -2,16 +2,37 @@
 
 > Zero-knowledge file and text sharing service with end-to-end encryption and one-time access
 
+**Everything is encrypted on your device. The server never has access to your data.**
+
 ## Features
 
-- **Client-side encryption** - Files and text are encrypted in your browser before upload (AES-256-GCM)
-- **Text secrets** - Share encrypted text snippets (up to 1000 characters) without files
-- **File sharing** - Upload files up to 500MB with secure encryption
-- **One-time access** - Each file/text can only be viewed once, then it's automatically deleted (with network failure protection)
-- **Zero-knowledge** - The server never sees your encryption keys or unencrypted content
-- **No registration** - No accounts, no email, no tracking
-- **Self-destructing** - Content expires after 1, 12, or 24 hours
-- **Privacy-first** - Built with privacy as the core principle
+### 🔐 Security First
+- **Client-side encryption** — Files and text are encrypted in your browser before upload (AES-256-GCM)
+- **Zero-knowledge architecture** — The server never sees your encryption keys or unencrypted content
+- **One-time access** — Each file/text can only be viewed once, then it's automatically deleted
+- **Network failure protection** — 10-minute retry window if download is interrupted
+
+### 📝 Two Sharing Modes
+- **File Sharing** — Upload files up to 500MB with secure encryption
+- **Text Secrets** — Share encrypted text snippets (up to 1000 characters) without uploading files
+
+### 🚫 No Tracking, No Accounts
+- **No registration** — No accounts, no email, no cookies
+- **Privacy-first** — No analytics, no IP logging, no user tracking
+- **Self-destructing** — Content expires after 1, 12, or 24 hours (your choice)
+
+### 🎨 Modern Interface
+- **Clean design** — Built with Tailwind CSS for a modern, professional look
+- **Dark mode** — Automatic dark/light theme with manual toggle
+- **Responsive** — Works seamlessly on desktop and mobile devices
+- **Accessible** — WCAG 2.1 AA compliant
+
+### 🛡️ Bot Protection
+- **reCAPTCHA v3** — Invisible bot detection on all POST endpoints
+- **CloudFront origin verification** — Blocks direct API access
+- **Rate limiting** — Prevents abuse without compromising legitimate use
+
+---
 
 ## This Service Is For You If...
 
@@ -21,27 +42,18 @@
 - You value privacy and full control over your data — no logs, no tracking
 - You need a simple "view once → gone" approach, with no history or repeated access
 
+---
 
 ## How It Works
 
-### Uploading Files
+### Uploading Files or Secrets
 
-1. Select a file and choose expiration time (1h, 12h, or 24h)
+1. Select a file or enter text and choose expiration time (1h, 12h, or 24h)
 2. Your browser generates a random encryption key
-3. File is encrypted locally using AES-256-GCM
-4. Encrypted file is uploaded to secure storage (no filename sent to server)
-5. You receive a shareable link with the decryption key and filename in the URL fragment (`#key#filename`)
-6. The key and filename never leave your browser or reach the server
-
-### Sharing Text Secrets
-
-1. Type or paste your secret text (max 1000 characters)
-2. Choose expiration time (1h, 12h, or 24h)
-3. Your browser generates a random encryption key
-4. Text is encrypted locally using AES-256-GCM
-5. Encrypted text is sent directly to the database (no files created)
-6. You receive a shareable link with the decryption key in the URL fragment
-7. The key never leaves your browser or reaches the server
+3. Content is encrypted locally using AES-256-GCM
+4. Encrypted data is uploaded to secure storage (server never sees the key or original filename)
+5. You receive a shareable link with the decryption key in the URL fragment (`#key#filename`)
+6. **The key and filename never leave your browser or reach the server**
 
 ### Downloading/Viewing
 
@@ -56,20 +68,19 @@
 7. Content is automatically deleted from the server
 8. The link becomes invalid forever
 
-**Network Failure Protection**: If the download is interrupted (network error, browser crash), you can try again in 10 minutes. To retry using the same link. This ensures that you do not lose access due to temporary technical problems, while maintaining the security of a one-time download.
+**Network Failure Protection**: If the download is interrupted (network error, browser crash), you can retry within 10 minutes using the same link. This ensures that you don't lose access due to temporary technical problems while maintaining the security of one-time downloads.
+
+---
 
 ## Security
 
-- **Encryption**: AES-256-GCM with 256-bit keys
+### Encryption
+- **Algorithm**: AES-256-GCM with 256-bit keys
+- **Key generation**: Cryptographically secure random values (`crypto.getRandomValues`)
 - **Zero-knowledge**: Decryption keys and filenames stay in URL fragments, never sent to server
-- **Two-phase download**: Reservation system prevents data loss from network failures while maintaining one-time access
-- **Bot protection**: Google reCAPTCHA v3 with invisible verification (deployed)
-- **Origin verification**: CloudFront custom header blocks direct API access (deployed)
-- **Atomic operations**: Race condition prevention using conditional database updates
 - **HTTPS only**: All communication encrypted in transit (TLS 1.2+)
-- **No tracking**: No user accounts, no IP logging, no analytics
 
-### Security Layers
+### Protection Layers
 
 **Layer 1 - CloudFront Origin Verification** ✅ Deployed
 - Custom secret header blocks direct API calls
@@ -82,31 +93,85 @@
 - Invisible to legitimate users (score-based verification)
 - Protects upload, download, and abuse report endpoints
 - Minimum score threshold: 0.5 (adjustable)
-- Lambda Layer for efficient dependency management
+
+**Layer 3 - Two-Phase Download with Reservation System** ✅ Deployed
+- **Phase 1 - Reserve**: Atomic DynamoDB update reserves content for download
+  - 10-minute reservation window
+  - Prevents race conditions when multiple users try to download
+  - Allows retry if network fails during download
+- **Phase 2 - Confirm**: Browser confirms successful download
+  - Content is permanently deleted only after confirmation
+  - Statistics are updated atomically
+  - No data loss from temporary network issues
+
+### What We DON'T Store
+- ❌ Email addresses or user names
+- ❌ File contents (only encrypted blobs)
+- ❌ Original filenames
+- ❌ Encryption keys
+- ❌ IP addresses (only hashed for abuse prevention)
+
+### What We DO Store
+- ✅ File size (metadata)
+- ✅ Upload timestamp
+- ✅ Expiration time
+- ✅ Download status (reserved/confirmed)
+- ✅ IP address hash (SHA-256, for abuse prevention only)
+
+---
 
 ## Limitations
 
 - Maximum file size: 500 MB
 - Files expire after max 24 hours
 - Each file can only be downloaded once (with 10-minute retry window for network failures)
-- Desktop browsers recommended (mobile support coming soon)
+- Desktop browsers recommended (mobile support available)
+
+---
 
 ## Technology
 
-- **Frontend**: Vanilla JavaScript, Web Crypto API
-- **Backend**: AWS Lambda (7 functions, Python 3.12), API Gateway
-- **Storage**: S3 (encrypted files), DynamoDB (metadata + statistics)
-- **CDN**: CloudFront
-- **Infrastructure**: Terraform (Infrastructure as Code)
+### High level architecture
+
+![High level architecture](architecture.jpeg)
+
+### Frontend
+- **Vanilla JavaScript** - No frameworks, pure Web Crypto API
+- **Tailwind CSS** - Modern utility-first CSS framework
+- **Dark Mode** - CSS class-based theme switching with localStorage persistence
+- **Web Workers** - Background encryption/decryption for large files
+- **Responsive Design** - Mobile-first approach
+
+### Backend
+- **AWS Lambda** - 7 serverless functions (Python 3.12)
+- **API Gateway** - RESTful API with request validation
+- **Lambda Layers** - Shared dependencies (boto3, requests)
+
+### Storage
+- **Amazon S3** - Encrypted file storage with lifecycle policies
+- **DynamoDB** - Metadata with TTL and atomic operations
+- **Global Statistics** - Privacy-safe aggregate metrics
+
+### CDN & Security
+- **CloudFront** - Global CDN with custom security headers
+- **Origin Access Identity** - Secure S3 access
+- **reCAPTCHA v3** - Invisible bot protection
+
+### Infrastructure
+- **Terraform** - Infrastructure as Code
+- **GitHub Actions** - CI/CD pipeline (planned)
+- **CloudWatch** - Monitoring and alerting
+
+---
 
 ## Development
-See [ROADMAP.md](./ROADMAP.md) for development progress and plans.
 
 ### Prerequisites
 
 - AWS Account
 - Terraform >= 1.5
 - Python 3.12
+- Node.js (for Tailwind CSS)
 - AWS CLI configured (`aws configure`)
 
 ### Quick Start - Deploy to AWS
@@ -115,23 +180,34 @@ See [ROADMAP.md](./ROADMAP.md) for development progress and plans.
 # 1. Bootstrap Terraform backend (once per AWS account)
 ./scripts/bootstrap-terraform-backend.sh
 
-# 2. Deploy infrastructure
+# 2. Build Lambda packages
+make build-lambdas-dev
+
+# 3. Build frontend CSS
+make build-frontend
+
+# 4. Initialize Terraform
 make init-dev
+
+# 5. Deploy infrastructure
 make deploy-dev
 
-# 3. Update API URLs in frontend/js/upload.js and frontend/js/download.js
-# Get your API endpoint: cd terraform/environments/dev && terraform output api_endpoint
-
-# 4. Deploy frontend
-make deploy-frontend-dev
-
-# 5. Get your CloudFront URL
+# 6. Get your CloudFront URL
 cd terraform/environments/dev && terraform output cloudfront_domain
 ```
 
 ### Local Frontend Development
 
 ```bash
+# Install dependencies (Tailwind CSS)
+npm install
+
+# Watch mode - auto-rebuild CSS on changes
+make dev-frontend
+
+# Or manually build CSS
+make build-frontend
+
 # Serve frontend locally
 cd frontend
 python -m http.server 8000
@@ -140,10 +216,66 @@ python -m http.server 8000
 # Note: You'll need to update API URLs to point to your deployed backend
 ```
 
+### Project Structure
+
+```
+sdbx/
+├── backend/
+│   ├── lambdas/           # 7 Lambda functions
+│   │   ├── upload_init/
+│   │   ├── download/
+│   │   ├── confirm_download/
+│   │   ├── get_metadata/
+│   │   ├── get_stats/
+│   │   ├── cleanup/
+│   │   └── report_abuse/
+│   ├── shared/            # Shared utilities
+│   │   ├── constants.py
+│   │   ├── dynamo.py      # DynamoDB operations
+│   │   ├── s3.py          # S3 operations
+│   │   ├── security.py    # Security decorators
+│   │   ├── validation.py
+│   │   ├── response.py
+│   │   └── ...
+│   └── tests/             # 135+ backend tests
+├── frontend/
+│   ├── css/
+│   │   ├── input.css      # Tailwind source
+│   │   └── output.css     # Built CSS
+│   ├── js/
+│   │   ├── crypto.js      # AES-256-GCM encryption
+│   │   ├── crypto-worker.js  # Web Worker for large files
+│   │   ├── upload.js
+│   │   ├── download.js
+│   │   ├── text-upload.js
+│   │   ├── utils.js
+│   │   ├── theme-toggle.js   # Dark mode
+│   │   ├── header.js      # Shared navigation
+│   │   └── init.js
+│   ├── tests/             # 24 frontend tests
+│   ├── index.html         # Upload page
+│   ├── download.html      # Download page
+│   └── about.html         # About page
+├── terraform/
+│   ├── environments/
+│   │   ├── dev/
+│   │   └── prod/
+│   └── modules/
+│       ├── storage/       # S3 + DynamoDB
+│       ├── api/           # API Gateway + Lambdas
+│       ├── cdn/           # CloudFront
+│       └── monitoring/    # CloudWatch
+└── scripts/               # Deployment scripts
+```
+
 ### Deployment Status
 
 - ✅ Development environment deployed and operational
 - ✅ Production environment deployed and operational
+- ✅ Modern UI with Tailwind CSS and dark mode
+- ✅ Network failure protection implemented
+
+---
 
 ## Testing
 
@@ -168,28 +300,96 @@ make test-backend-cov
 - **Frontend**: 24 tests covering AES-256-GCM encryption, key management, URL encoding
 - **Coverage**: ~80% of shared modules
 
+**What's Tested:**
+- ✅ AES-256-GCM encryption/decryption round-trips
+- ✅ Key generation and export/import
+- ✅ Large file handling (10 MB)
+- ✅ Unicode text preservation
+- ✅ Wrong key rejection
+- ✅ Input validation (file ID, size, TTL)
+- ✅ Response formatting and CORS headers
+- ✅ Decimal encoding for DynamoDB
+- ✅ CloudFront origin verification
+- ✅ Edge cases and error handling
+
+---
 
 ## Privacy Policy
+
+### Simple Version: We Collect Nothing
 
 - We don't store unencrypted files
 - We don't store or have access to filenames
 - We don't have access to your encryption keys
 - We don't log IP addresses for file access
+- We don't use cookies, tracking, or analytics
 - Files are automatically deleted after first download or expiration
-- No cookies, no tracking, no analytics
 
-## License
+### What We Store
 
-MIT License - See LICENSE file for details
+The only data we store is:
+- Encrypted file blobs (which we cannot decrypt)
+- File size, upload timestamp, and expiration time
+- Download reservation status
+- IP address hash (SHA-256, for abuse prevention only, not linked to files)
+
+**That's it.** No personal information, no tracking, no analytics.
+
+---
 
 ## Contributing
 
 Contributions welcome! Please read our contribution guidelines first.
 
-## Disclaimer
+### How to Contribute
 
-This service is provided as-is. While we implement strong encryption and security practices, users are responsible for their own data. Do not use for illegal content.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`make test`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+### Areas Where We Need Help
+
+- Security audits
+- Performance optimization
+- Documentation improvements
+- UI/UX enhancements
+- Additional test coverage
+- Feature implementations (see [ROADMAP.md](./ROADMAP.md))
 
 ---
 
-**Built with privacy in mind** 🔒
+## License
+
+MIT License - See [LICENSE](./LICENSE) file for details
+
+---
+
+## Disclaimer
+
+This service is provided as-is. While we implement strong encryption and security practices, users are responsible for their own data. Do not use sdbx for illegal content.
+
+For sensitive files, we recommend additional security measures like password-protecting archives before upload.
+
+---
+
+## Acknowledgments
+
+Built with privacy in mind 🔒
+
+Special thanks to:
+- Web Crypto API for browser-native encryption
+- AWS for reliable serverless infrastructure
+- Tailwind CSS for beautiful utility-first styling
+- The open-source community
+
+---
+
+**Questions or Issues?**
+
+- 🐛 [Report a Bug](https://github.com/antonaks/sdbx/issues)
+- 💡 [Request a Feature](https://github.com/antonaks/sdbx/issues)
+- 🔒 [Report Security Issue](https://github.com/antonaks/sdbx/security)
