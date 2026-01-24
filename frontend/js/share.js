@@ -112,14 +112,26 @@
     function generateQRCode(url) {
         elements.qrContainer.innerHTML = '';
 
-        new QRCode(elements.qrContainer, {
-            text: url,
-            width: CONFIG.QR_SIZE,
-            height: CONFIG.QR_SIZE,
-            colorDark: '#000000',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.H,
-        });
+        try {
+            new QRCode(elements.qrContainer, {
+                text: url,
+                width: CONFIG.QR_SIZE,
+                height: CONFIG.QR_SIZE,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.L,  // Use L for longer URLs
+            });
+        } catch (error) {
+            // URL too long for QR code - show message instead
+            console.warn('QR code generation failed:', error.message);
+            elements.qrContainer.innerHTML = `
+                <div class="flex items-center justify-center h-full text-center p-4">
+                    <p class="text-gray-500 dark:text-slate-400 text-sm">
+                        URL too long for QR code.<br>Use "Copy Link" instead.
+                    </p>
+                </div>
+            `;
+        }
     }
 
     /**
