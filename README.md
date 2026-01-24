@@ -337,6 +337,22 @@ The only data we store is:
 
 ---
 
+## Roadmap
+
+Planned features for sdbx:
+
+- ✅ **Multiple Files / Zip Bundle** - Upload multiple files as encrypted bundle
+- 📋 **Password Protection** - Optional password layer on top of encryption
+- 📋 **Custom Expiration Times** - Precise expiration beyond presets
+- 📋 **Short URLs** - Shorter file IDs for cleaner links
+- 📋 **IP/Geo Restriction** - Restrict downloads by country or IP
+- 📋 **Self-destructing Voice Message** - Encrypted audio messages
+- 📋 **Dead Man's Switch** - Auto-share if user doesn't check in
+
+See [FEATURE_ROADMAP.md](./FEATURE_ROADMAP.md) for full details and implementation plans.
+
+---
+
 ## Contributing
 
 Contributions welcome! Please read our [contribution guidelines](./CONTRIBUTING.md) first.
@@ -358,7 +374,7 @@ Contributions welcome! Please read our [contribution guidelines](./CONTRIBUTING.
 - Documentation improvements
 - UI/UX enhancements
 - Additional test coverage
-- Feature implementations (see [ROADMAP.md](./ROADMAP.md))
+- Feature implementations (see [FEATURE_ROADMAP.md](./FEATURE_ROADMAP.md))
 
 ---
 
