@@ -60,10 +60,16 @@ deploy-dev: build-lambdas-dev build-frontend ## Deploy dev environment (backend 
 			echo "" && \
 			echo "📦 Deploying frontend..." && \
 			cd ../../.. && \
+			echo "🔧 Patching API paths for dev environment..." && \
+			find frontend/js -name "*.js" -exec sed -i "s|'/prod'|'/dev'|g" {} \; && \
+			find frontend/js -name "*.js" -exec sed -i "s|/prod/|/dev/|g" {} \; && \
 			BUCKET=$$(cd terraform/environments/dev && terraform output -raw static_bucket_name) && \
 			aws s3 sync frontend/ s3://$$BUCKET/ --delete --exclude "tests/*" && \
 			DIST_ID=$$(cd terraform/environments/dev && terraform output -raw cloudfront_distribution_id) && \
 			aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+			echo "🔧 Restoring API paths..." && \
+			find frontend/js -name "*.js" -exec sed -i "s|'/dev'|'/prod'|g" {} \; && \
+			find frontend/js -name "*.js" -exec sed -i "s|/dev/|/prod/|g" {} \; && \
 			echo "" && \
 			echo "✅ Deployment complete!" && \
 			echo "" && \
@@ -197,10 +203,16 @@ install-backend: ## Install backend dependencies
 
 deploy-frontend-dev: build-frontend ## Deploy frontend to dev S3
 	@echo "📦 Deploying frontend to DEV..."
+	@echo "🔧 Patching API paths for dev environment..."
+	@find frontend/js -name "*.js" -exec sed -i "s|'/prod'|'/dev'|g" {} \;
+	@find frontend/js -name "*.js" -exec sed -i "s|/prod/|/dev/|g" {} \;
 	@BUCKET=$$(cd terraform/environments/dev && terraform output -raw static_bucket_name) && \
 		aws s3 sync frontend/ s3://$$BUCKET/ --delete --exclude "tests/*" && \
 		DIST_ID=$$(cd terraform/environments/dev && terraform output -raw cloudfront_distribution_id) && \
 		aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+		echo "🔧 Restoring API paths..." && \
+		find frontend/js -name "*.js" -exec sed -i "s|'/dev'|'/prod'|g" {} \; && \
+		find frontend/js -name "*.js" -exec sed -i "s|/dev/|/prod/|g" {} \; && \
 		echo "✅ Frontend deployed to dev"
 
 deploy-frontend-prod: build-frontend ## Deploy frontend to prod S3

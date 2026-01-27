@@ -54,6 +54,8 @@ module "cdn" {
   static_bucket_regional_domain_name = module.storage.static_bucket_regional_domain_name
   api_endpoint                       = module.api.api_invoke_url
   cloudfront_secret                  = random_password.cloudfront_secret.result
+  custom_domain                      = var.custom_domain
+  acm_certificate_arn                = var.acm_certificate_arn
   tags                               = local.common_tags
 }
 
