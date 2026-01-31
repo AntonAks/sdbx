@@ -142,22 +142,27 @@ const CryptoModule = (function() {
      * @returns {Promise<Uint8Array>} Encrypted data
      */
     async function encryptFile(file, key, onProgress) {
-        return new Promise(async (resolve, reject) => {
+        if (onProgress) onProgress(0);
+        const arrayBuffer = await file.arrayBuffer();
+        if (onProgress) onProgress(10);
+
+        // Try Web Worker path (requires extractable key)
+        let keyData;
+        try {
+            keyData = await exportKey(key);
+        } catch (e) {
+            // Key not extractable (some mobile browsers) — fall back to main thread
+            return encryptMainThread(arrayBuffer, key, onProgress);
+        }
+
+        return new Promise((resolve, reject) => {
             try {
-                // Create worker
                 const worker = new Worker('/js/crypto-worker.js');
 
-                // Handle worker messages
                 worker.onmessage = function(e) {
                     const { type, percent, result, error } = e.data;
-
                     if (type === 'progress') {
-                        if (onProgress) {
-                            // Map worker progress (0-100) to overall progress (10-100)
-                            // Reserve 0-10% for file reading
-                            const overallProgress = 10 + (percent * 0.9);
-                            onProgress(overallProgress);
-                        }
+                        if (onProgress) onProgress(10 + (percent * 0.9));
                     } else if (type === 'complete') {
                         worker.terminate();
                         resolve(new Uint8Array(result));
@@ -172,25 +177,38 @@ const CryptoModule = (function() {
                     reject(error);
                 };
 
-                // Read file
-                if (onProgress) onProgress(0);
-                const arrayBuffer = await file.arrayBuffer();
-                if (onProgress) onProgress(10);
-
-                // Export key to raw bytes
-                const keyData = await exportKey(key);
-
-                // Send to worker
                 worker.postMessage({
                     action: 'encrypt',
                     data: arrayBuffer,
                     keyData: keyData
-                }, [arrayBuffer]); // Transfer ownership for efficiency
+                }, [arrayBuffer]);
 
             } catch (error) {
                 reject(error);
             }
         });
+    }
+
+    /**
+     * Main-thread encryption fallback for non-extractable keys
+     */
+    async function encryptMainThread(data, key, onProgress) {
+        if (onProgress) onProgress(20);
+        const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+        if (onProgress) onProgress(30);
+
+        const ciphertext = await crypto.subtle.encrypt(
+            { name: ALGORITHM, iv: iv },
+            key,
+            data
+        );
+        if (onProgress) onProgress(90);
+
+        const result = new Uint8Array(iv.length + ciphertext.byteLength);
+        result.set(iv, 0);
+        result.set(new Uint8Array(ciphertext), iv.length);
+        if (onProgress) onProgress(100);
+        return result;
     }
 
     /**
@@ -201,19 +219,25 @@ const CryptoModule = (function() {
      * @returns {Promise<ArrayBuffer>} Decrypted data
      */
     async function decryptFile(encryptedData, key, onProgress) {
-        return new Promise(async (resolve, reject) => {
+        if (onProgress) onProgress(0);
+
+        // Try Web Worker path (requires extractable key)
+        let keyData;
+        try {
+            keyData = await exportKey(key);
+        } catch (e) {
+            // Key not extractable (some mobile browsers) — fall back to main thread
+            return decryptMainThread(encryptedData, key, onProgress);
+        }
+
+        return new Promise((resolve, reject) => {
             try {
-                // Create worker
                 const worker = new Worker('/js/crypto-worker.js');
 
-                // Handle worker messages
                 worker.onmessage = function(e) {
                     const { type, percent, result, error } = e.data;
-
                     if (type === 'progress') {
-                        if (onProgress) {
-                            onProgress(percent);
-                        }
+                        if (onProgress) onProgress(percent);
                     } else if (type === 'complete') {
                         worker.terminate();
                         resolve(result);
@@ -228,21 +252,35 @@ const CryptoModule = (function() {
                     reject(error);
                 };
 
-                // Export key to raw bytes
-                if (onProgress) onProgress(0);
-                const keyData = await exportKey(key);
-
-                // Send to worker
                 worker.postMessage({
                     action: 'decrypt',
                     data: encryptedData.buffer,
                     keyData: keyData
-                }, [encryptedData.buffer]); // Transfer ownership for efficiency
+                }, [encryptedData.buffer]);
 
             } catch (error) {
                 reject(error);
             }
         });
+    }
+
+    /**
+     * Main-thread decryption fallback for non-extractable keys
+     */
+    async function decryptMainThread(encryptedData, key, onProgress) {
+        if (onProgress) onProgress(10);
+        const dataArray = new Uint8Array(encryptedData);
+        const iv = dataArray.slice(0, IV_LENGTH);
+        const ciphertext = dataArray.slice(IV_LENGTH);
+        if (onProgress) onProgress(20);
+
+        const decrypted = await crypto.subtle.decrypt(
+            { name: ALGORITHM, iv: iv },
+            key,
+            ciphertext
+        );
+        if (onProgress) onProgress(100);
+        return decrypted;
     }
 
     // ==========================================
