@@ -1,7 +1,13 @@
 """Unit tests for validation module - NO MOCKS."""
 
 import pytest
-from shared.validation import validate_file_id, validate_file_size, validate_ttl
+from shared.validation import (
+    validate_file_id,
+    validate_file_size,
+    validate_pin,
+    validate_pin_file_id,
+    validate_ttl,
+)
 from shared.exceptions import ValidationError
 
 
@@ -215,3 +221,87 @@ class TestValidationEdgeCases:
         """Test UUID with all Fs (valid format but unusual)."""
         # Valid UUID v4 format with all Fs (version and variant bits set correctly)
         validate_file_id("ffffffff-ffff-4fff-bfff-ffffffffffff")
+
+
+class TestValidatePin:
+    """Test PIN validation (4 alphanumeric characters)."""
+
+    def test_valid_pin_numeric(self):
+        validate_pin("1234")
+
+    def test_valid_pin_alpha(self):
+        validate_pin("AbCd")
+
+    def test_valid_pin_alphanumeric(self):
+        validate_pin("7a2B")
+
+    def test_pin_too_short(self):
+        with pytest.raises(ValidationError, match="PIN must be exactly 4 characters"):
+            validate_pin("12")
+
+    def test_pin_too_long(self):
+        with pytest.raises(ValidationError, match="PIN must be exactly 4 characters"):
+            validate_pin("12345")
+
+    def test_pin_with_special_characters(self):
+        with pytest.raises(ValidationError, match="PIN must contain only letters and numbers"):
+            validate_pin("12@#")
+
+    def test_pin_with_space(self):
+        with pytest.raises(ValidationError, match="PIN must contain only letters and numbers"):
+            validate_pin("ab d")
+
+    def test_pin_none(self):
+        with pytest.raises(ValidationError, match="PIN is required"):
+            validate_pin(None)
+
+    def test_pin_empty(self):
+        with pytest.raises(ValidationError, match="PIN is required"):
+            validate_pin("")
+
+    def test_pin_case_sensitive(self):
+        validate_pin("abcd")
+        validate_pin("ABCD")
+
+    def test_pin_not_in_error_message(self):
+        try:
+            validate_pin("ab@d")
+        except ValidationError as e:
+            assert "ab@d" not in str(e)
+
+
+class TestValidatePinFileId:
+    """Test 6-digit file ID validation."""
+
+    def test_valid_six_digit_id(self):
+        validate_pin_file_id("482973")
+
+    def test_valid_six_digit_all_zeros(self):
+        validate_pin_file_id("000000")
+
+    def test_valid_six_digit_all_nines(self):
+        validate_pin_file_id("999999")
+
+    def test_too_short(self):
+        with pytest.raises(ValidationError, match="File ID must be exactly 6 digits"):
+            validate_pin_file_id("12345")
+
+    def test_too_long(self):
+        with pytest.raises(ValidationError, match="File ID must be exactly 6 digits"):
+            validate_pin_file_id("1234567")
+
+    def test_non_numeric(self):
+        with pytest.raises(ValidationError, match="File ID must be exactly 6 digits"):
+            validate_pin_file_id("abcdef")
+
+    def test_mixed_alphanumeric(self):
+        with pytest.raises(ValidationError, match="File ID must be exactly 6 digits"):
+            validate_pin_file_id("12ab34")
+
+    def test_none(self):
+        with pytest.raises(ValidationError, match="File ID is required"):
+            validate_pin_file_id(None)
+
+    def test_empty(self):
+        with pytest.raises(ValidationError, match="File ID is required"):
+            validate_pin_file_id("")
