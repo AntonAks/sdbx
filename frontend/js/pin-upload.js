@@ -317,7 +317,7 @@ const PinUpload = (function() {
             // Step 3: Derive encryption key from PIN + server salt
             showProgress(20, 'Deriving encryption key...');
             const saltBytes = hexToUint8Array(salt);
-            const encryptionKey = await CryptoModule.deriveKeyFromPassword(pin, saltBytes);
+            const encryptionKey = await CryptoModule.deriveKeyFromPassword(pin, saltBytes, true);
 
             // Step 4: Encrypt file
             showProgress(25, 'Encrypting... 0%');
