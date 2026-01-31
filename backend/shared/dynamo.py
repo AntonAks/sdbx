@@ -533,6 +533,7 @@ def create_pin_file_record(
     content_type: str = "file",
     s3_key: Optional[str] = None,
     encrypted_text: Optional[str] = None,
+    file_name: Optional[str] = None,
 ) -> dict[str, Any]:
     """
     Create a DynamoDB record for PIN-based sharing.
@@ -573,6 +574,9 @@ def create_pin_file_record(
         "salt": salt,
         "attempts_left": PIN_MAX_ATTEMPTS,
     }
+
+    if file_name:
+        record["file_name"] = file_name
 
     if content_type == "file":
         if not s3_key:

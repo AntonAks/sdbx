@@ -5,7 +5,7 @@ import os
 from typing import Any
 
 from shared.constants import DOWNLOAD_URL_EXPIRY_SECONDS
-from shared.dynamo import verify_pin_and_download
+from shared.dynamo import increment_download_counter, verify_pin_and_download
 from shared.exceptions import (
     FileAlreadyDownloadedError,
     FileExpiredError,
@@ -45,8 +45,16 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         record = verify_pin_and_download(TABLE_NAME, file_id, pin)
 
+        # Increment global stats (non-blocking)
+        try:
+            increment_download_counter(TABLE_NAME, file_size=record.get("file_size", 0))
+        except Exception as stats_err:
+            logger.warning(f"Failed to increment stats for PIN download: {stats_err}")
+
         content_type = record.get("content_type", "file")
         salt = record.get("salt")
+
+        file_name = record.get("file_name", "")
 
         if content_type == "text":
             logger.info(f"PIN text download: file_id={file_id}")
@@ -55,6 +63,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 "encrypted_text": record["encrypted_text"],
                 "salt": salt,
                 "file_size": record["file_size"],
+                "file_name": file_name,
             })
         else:
             download_url = generate_download_url(
@@ -68,6 +77,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 "download_url": download_url,
                 "salt": salt,
                 "file_size": record["file_size"],
+                "file_name": file_name,
             })
 
     except ValidationError as e:

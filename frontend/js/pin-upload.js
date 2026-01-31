@@ -1,6 +1,6 @@
 /**
  * PIN-based upload module for sdbx
- * Handles method selection, file upload with PIN encryption, and result display
+ * Handles method selection, file/text upload with PIN encryption, and result display
  */
 
 'use strict';
@@ -10,6 +10,8 @@ const PinUpload = (function() {
     const API_BASE = '/prod';
     const RECAPTCHA_SITE_KEY = '6LdulTIsAAAAAJdhvyMU6B1og7GE7d5DySrQUQiv';
     const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
+    const MAX_FILES = 10;
+    const MAX_TEXT_LENGTH = 1000;
     const PIN_REGEX = /^[a-zA-Z0-9]{4}$/;
 
     // TTL display labels
@@ -23,7 +25,8 @@ const PinUpload = (function() {
     let els = {};
 
     // State
-    let selectedFile = null;
+    let selectedFiles = []; // Array of File objects
+    let activeTab = 'file'; // 'file' or 'text'
     let isUploading = false;
 
     /**
@@ -41,13 +44,28 @@ const PinUpload = (function() {
 
         // PIN upload form elements
         els.pinUploadSection = document.getElementById('pin-upload-section');
-        els.pinBackBtn = document.getElementById('pin-back-btn');
+        // Tab elements
+        els.pinFileTab = document.getElementById('pin-file-tab');
+        els.pinTextTab = document.getElementById('pin-text-tab');
+        els.pinTabBtns = document.querySelectorAll('.tab-btn[data-pin-tab]');
+
+        // File elements
         els.pinDropZone = document.getElementById('pin-drop-zone');
         els.pinFileInput = document.getElementById('pin-file-input');
         els.pinFileInfo = document.getElementById('pin-file-info');
         els.pinFileName = document.getElementById('pin-file-name');
         els.pinFileSize = document.getElementById('pin-file-size');
         els.pinFileRemove = document.getElementById('pin-file-remove');
+        els.pinFileList = document.getElementById('pin-file-list');
+        els.pinFileCount = document.getElementById('pin-file-count');
+        els.pinFilesClear = document.getElementById('pin-files-clear');
+        els.pinFileListItems = document.getElementById('pin-file-list-items');
+
+        // Text elements
+        els.pinTextInput = document.getElementById('pin-text-input');
+        els.pinTextCharCount = document.getElementById('pin-text-char-count');
+
+        // Common form elements
         els.pinInput = document.getElementById('pin-input');
         els.pinCharCount = document.getElementById('pin-char-count');
         els.pinValidationMsg = document.getElementById('pin-validation-msg');
@@ -90,8 +108,13 @@ const PinUpload = (function() {
             if (e.target === els.methodHelpModal) closeHelpModal();
         });
 
-        // Back button
-        els.pinBackBtn.addEventListener('click', () => selectMethod(null));
+        // Tab switching
+        els.pinTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.pinTab;
+                switchTab(tab === 'pin-text-tab' ? 'text' : 'file');
+            });
+        });
 
         // File handling
         els.pinDropZone.addEventListener('click', () => els.pinFileInput.click());
@@ -99,7 +122,11 @@ const PinUpload = (function() {
         els.pinDropZone.addEventListener('dragleave', handleDragLeave);
         els.pinDropZone.addEventListener('drop', handleDrop);
         els.pinFileInput.addEventListener('change', handleFileSelect);
-        els.pinFileRemove.addEventListener('click', removeFile);
+        els.pinFileRemove.addEventListener('click', clearFiles);
+        els.pinFilesClear.addEventListener('click', clearFiles);
+
+        // Text input
+        els.pinTextInput.addEventListener('input', handleTextInput);
 
         // PIN input
         els.pinInput.addEventListener('input', handlePinInput);
@@ -122,15 +149,34 @@ const PinUpload = (function() {
     }
 
     // ==========================================
+    // Tab Switching
+    // ==========================================
+
+    function switchTab(tab) {
+        activeTab = tab;
+
+        // Update tab button styles
+        els.pinTabBtns.forEach(btn => {
+            const isActive = (tab === 'text' && btn.dataset.pinTab === 'pin-text-tab') ||
+                             (tab === 'file' && btn.dataset.pinTab === 'pin-file-tab');
+            btn.classList.toggle('active', isActive);
+        });
+
+        // Show/hide panels
+        els.pinFileTab.style.display = tab === 'file' ? '' : 'none';
+        els.pinTextTab.style.display = tab === 'text' ? '' : 'none';
+
+        // Update button text
+        els.pinUploadBtn.textContent = tab === 'text' ? 'Encrypt & Share' : 'Encrypt & Upload';
+
+        updateUploadButton();
+    }
+
+    // ==========================================
     // Method Selection
     // ==========================================
 
-    /**
-     * Switch between sharing methods
-     * @param {'link'|'pin'|null} method - Selected method or null for selection screen
-     */
     function selectMethod(method) {
-        // Hide everything first
         els.methodSelection.style.display = 'none';
         els.uploadSection.style.display = 'none';
         els.pinUploadSection.style.display = 'none';
@@ -141,7 +187,6 @@ const PinUpload = (function() {
         } else if (method === 'pin') {
             els.pinUploadSection.style.display = '';
         } else {
-            // Show method selection screen
             els.methodSelection.style.display = '';
         }
     }
@@ -176,50 +221,85 @@ const PinUpload = (function() {
         e.preventDefault();
         els.pinDropZone.classList.remove('border-blue-500', 'bg-gray-100', 'dark:bg-slate-800/50');
 
-        const files = e.dataTransfer.files;
+        const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
-            setFile(files[0]);
+            setFiles(files);
         }
     }
 
     function handleFileSelect(e) {
-        const files = e.target.files;
+        const files = Array.from(e.target.files);
         if (files.length > 0) {
-            setFile(files[0]);
+            setFiles(files);
         }
     }
 
     /**
-     * Set the selected file and update UI
-     * @param {File} file
+     * Set selected files and update UI
+     * @param {File[]} files
      */
-    function setFile(file) {
-        if (file.size > MAX_FILE_SIZE) {
-            Utils.showError(`File size exceeds 500 MB limit. Selected: ${Utils.formatFileSize(file.size)}`);
+    function setFiles(files) {
+        // Validate count
+        if (files.length > MAX_FILES) {
+            Utils.showError(`Maximum ${MAX_FILES} files allowed. You selected ${files.length}.`);
             return;
         }
 
-        if (file.size === 0) {
-            Utils.showError('Cannot upload an empty file');
+        // Validate total size
+        const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+        if (totalSize > MAX_FILE_SIZE) {
+            Utils.showError(`Total size exceeds 500 MB limit. Selected: ${Utils.formatFileSize(totalSize)}`);
             return;
         }
 
-        selectedFile = file;
+        // Reject empty files
+        const emptyFiles = files.filter(f => f.size === 0);
+        if (emptyFiles.length > 0) {
+            Utils.showError('Cannot upload empty files');
+            return;
+        }
 
-        // Update UI
-        els.pinFileName.textContent = file.name;
-        els.pinFileSize.textContent = Utils.formatFileSize(file.size);
-        els.pinFileInfo.style.display = '';
+        selectedFiles = files;
+
+        if (files.length === 1) {
+            // Single file display
+            els.pinFileName.textContent = files[0].name;
+            els.pinFileSize.textContent = Utils.formatFileSize(files[0].size);
+            els.pinFileInfo.style.display = '';
+            els.pinFileList.style.display = 'none';
+        } else {
+            // Multi-file list display
+            els.pinFileCount.textContent = `${files.length} files (${Utils.formatFileSize(totalSize)})`;
+            els.pinFileListItems.innerHTML = '';
+            files.forEach(f => {
+                const li = document.createElement('li');
+                li.textContent = `${f.name} (${Utils.formatFileSize(f.size)})`;
+                els.pinFileListItems.appendChild(li);
+            });
+            els.pinFileList.style.display = '';
+            els.pinFileInfo.style.display = 'none';
+        }
+
         els.pinDropZone.style.display = 'none';
-
         updateUploadButton();
     }
 
-    function removeFile() {
-        selectedFile = null;
+    function clearFiles() {
+        selectedFiles = [];
         els.pinFileInput.value = '';
         els.pinFileInfo.style.display = 'none';
+        els.pinFileList.style.display = 'none';
         els.pinDropZone.style.display = '';
+        updateUploadButton();
+    }
+
+    // ==========================================
+    // Text Input
+    // ==========================================
+
+    function handleTextInput() {
+        const len = els.pinTextInput.value.length;
+        els.pinTextCharCount.textContent = len;
         updateUploadButton();
     }
 
@@ -231,7 +311,6 @@ const PinUpload = (function() {
         const value = els.pinInput.value;
         els.pinCharCount.textContent = `${value.length}/4`;
 
-        // Validate on each keystroke
         if (value.length === 0) {
             setPinValidation('', '');
         } else if (value.length < 4) {
@@ -245,14 +324,8 @@ const PinUpload = (function() {
         updateUploadButton();
     }
 
-    /**
-     * Set PIN validation message
-     * @param {string} message
-     * @param {string} colorClass - Tailwind color classes
-     */
     function setPinValidation(message, colorClass) {
         els.pinValidationMsg.textContent = message;
-        // Remove all color classes, then add new one
         els.pinValidationMsg.className = 'text-sm mt-1 min-h-[1.25rem]';
         if (colorClass) {
             colorClass.split(' ').forEach(cls => els.pinValidationMsg.classList.add(cls));
@@ -264,26 +337,38 @@ const PinUpload = (function() {
     // ==========================================
 
     function updateUploadButton() {
-        const hasFile = selectedFile !== null;
         const hasValidPin = PIN_REGEX.test(els.pinInput.value);
-        els.pinUploadBtn.disabled = !hasFile || !hasValidPin || isUploading;
+        let hasContent = false;
+
+        if (activeTab === 'file') {
+            hasContent = selectedFiles.length > 0;
+        } else {
+            const text = els.pinTextInput.value.trim();
+            hasContent = text.length > 0 && text.length <= MAX_TEXT_LENGTH;
+        }
+
+        els.pinUploadBtn.disabled = !hasContent || !hasValidPin || isUploading;
     }
 
     // ==========================================
     // Upload Flow
     // ==========================================
 
-    /**
-     * Handle the PIN upload flow:
-     * 1. Get reCAPTCHA token
-     * 2. Call API with PIN and file info (server generates salt, returns it)
-     * 3. Derive encryption key from PIN + server salt via PBKDF2
-     * 4. Encrypt file with derived key
-     * 5. Upload encrypted data to S3
-     * 6. Show result
-     */
     async function handleUpload() {
-        if (!selectedFile || isUploading) return;
+        if (isUploading) return;
+
+        if (activeTab === 'text') {
+            await handleTextUpload();
+        } else {
+            await handleFileUpload();
+        }
+    }
+
+    /**
+     * Handle file upload (single or multi-file bundle)
+     */
+    async function handleFileUpload() {
+        if (selectedFiles.length === 0) return;
 
         const pin = els.pinInput.value;
         if (!PIN_REGEX.test(pin)) {
@@ -298,15 +383,32 @@ const PinUpload = (function() {
             updateUploadButton();
             showProgress(0, 'Preparing...');
 
+            // If multiple files, bundle into ZIP first
+            let fileToUpload;
+            let fileName;
+
+            if (selectedFiles.length > 1) {
+                showProgress(2, 'Creating ZIP bundle...');
+                const bundle = await ZipBundle.createBundle(selectedFiles, (percent) => {
+                    showProgress(2 + percent * 0.08, `Bundling files... ${Math.round(percent)}%`);
+                });
+                fileToUpload = new File([bundle.blob], bundle.filename, { type: 'application/zip' });
+                fileName = bundle.filename;
+            } else {
+                fileToUpload = selectedFiles[0];
+                fileName = selectedFiles[0].name;
+            }
+
             // Step 1: Get reCAPTCHA token
-            showProgress(5, 'Verifying...');
+            showProgress(10, 'Verifying...');
             const recaptchaToken = await Utils.getRecaptchaToken(RECAPTCHA_SITE_KEY, 'pin_upload');
 
             // Step 2: Call PIN upload API
-            showProgress(10, 'Initializing upload...');
+            showProgress(15, 'Initializing upload...');
             const initResponse = await callPinUploadApi({
                 content_type: 'file',
-                file_size: selectedFile.size,
+                file_size: fileToUpload.size,
+                file_name: fileName,
                 pin: pin,
                 ttl: ttl,
                 recaptcha_token: recaptchaToken,
@@ -322,7 +424,7 @@ const PinUpload = (function() {
             // Step 4: Encrypt file
             showProgress(25, 'Encrypting... 0%');
             const encryptedData = await CryptoModule.encryptFile(
-                selectedFile,
+                fileToUpload,
                 encryptionKey,
                 (progress) => {
                     const percent = 25 + (progress * 0.35);
@@ -346,9 +448,78 @@ const PinUpload = (function() {
     }
 
     /**
+     * Handle text secret upload with PIN
+     */
+    async function handleTextUpload() {
+        const text = els.pinTextInput.value.trim();
+        if (!text) return;
+
+        const pin = els.pinInput.value;
+        if (!PIN_REGEX.test(pin)) {
+            Utils.showError('Invalid PIN. Must be exactly 4 alphanumeric characters.');
+            return;
+        }
+
+        const ttl = getSelectedTTL();
+
+        try {
+            isUploading = true;
+            updateUploadButton();
+            showProgress(0, 'Preparing...');
+
+            // Step 1: Get reCAPTCHA token
+            showProgress(10, 'Verifying...');
+            const recaptchaToken = await Utils.getRecaptchaToken(RECAPTCHA_SITE_KEY, 'pin_upload');
+
+            // Step 2: Upload text as an encrypted file via S3
+            // (PIN mode needs server salt before encryption, so we use file flow)
+            showProgress(20, 'Initializing...');
+            const textBlob = new Blob([new TextEncoder().encode(text)], { type: 'text/plain' });
+
+            const initResponse = await callPinUploadApi({
+                content_type: 'file',
+                file_size: textBlob.size,
+                file_name: 'secret.txt',
+                pin: pin,
+                ttl: ttl,
+                recaptcha_token: recaptchaToken,
+            });
+
+            const { file_id, upload_url, salt, expires_at } = initResponse;
+
+            // Step 3: Derive encryption key from PIN + server salt
+            showProgress(40, 'Deriving encryption key...');
+            const saltBytes = hexToUint8Array(salt);
+            const encryptionKey = await CryptoModule.deriveKeyFromPassword(pin, saltBytes, true);
+
+            // Step 4: Encrypt text as file
+            showProgress(50, 'Encrypting text...');
+            const textFile = new File([textBlob], 'secret.txt', { type: 'text/plain' });
+            const encryptedData = await CryptoModule.encryptFile(
+                textFile,
+                encryptionKey,
+                (progress) => {
+                    showProgress(50 + progress * 0.2, `Encrypting... ${Math.round(progress)}%`);
+                }
+            );
+
+            // Step 5: Upload to S3
+            showProgress(75, 'Uploading...');
+            await uploadToS3(upload_url, encryptedData);
+
+            // Step 6: Show result
+            showProgress(100, 'Upload complete!');
+            showResult(file_id, pin, ttl, expires_at);
+
+        } catch (error) {
+            console.error('PIN text upload error:', error);
+            Utils.showError(error.message || 'Upload failed. Please try again.');
+            resetUploadState();
+        }
+    }
+
+    /**
      * Call the PIN upload API
-     * @param {Object} body - Request body
-     * @returns {Promise<Object>} API response data
      */
     async function callPinUploadApi(body) {
         const response = await fetch(`${API_BASE}/pin/upload`, {
@@ -367,9 +538,6 @@ const PinUpload = (function() {
 
     /**
      * Upload encrypted data to S3 via presigned URL with progress tracking
-     * @param {string} presignedUrl - S3 presigned URL
-     * @param {Uint8Array} data - Encrypted data
-     * @returns {Promise<void>}
      */
     function uploadToS3(presignedUrl, data) {
         return new Promise((resolve, reject) => {
@@ -420,32 +588,19 @@ const PinUpload = (function() {
     // Result Display
     // ==========================================
 
-    /**
-     * Show upload result with code and PIN
-     * @param {string} fileId - 6-digit code
-     * @param {string} pin - User's PIN
-     * @param {string} ttl - TTL value used
-     * @param {number} expiresAt - Unix timestamp
-     */
     function showResult(fileId, pin, ttl, expiresAt) {
-        // Hide upload section, show result
         els.pinUploadSection.style.display = 'none';
         els.pinResultSection.style.display = '';
 
-        // Set code display
         els.pinCodeValue.textContent = fileId;
         els.pinCodeRepeat.textContent = fileId;
 
-        // Set PIN display
         els.pinDisplayValue.textContent = pin;
         els.pinDisplayMasked.style.display = '';
         els.pinDisplayValue.style.display = 'none';
         els.pinRevealBtn.textContent = 'Show';
 
-        // Set expiry label
         els.pinExpiryLabel.textContent = TTL_LABELS[ttl] || ttl;
-
-        // Set domain
         els.pinDomain.textContent = window.location.hostname;
 
         isUploading = false;
@@ -481,15 +636,19 @@ const PinUpload = (function() {
     }
 
     function handleUploadAnother() {
-        // Reset everything and go back to method selection
         resetUploadState();
-        selectedFile = null;
+        selectedFiles = [];
+        activeTab = 'file';
         els.pinInput.value = '';
         els.pinCharCount.textContent = '0/4';
         setPinValidation('', '');
         els.pinFileInput.value = '';
         els.pinFileInfo.style.display = 'none';
+        els.pinFileList.style.display = 'none';
         els.pinDropZone.style.display = '';
+        els.pinTextInput.value = '';
+        els.pinTextCharCount.textContent = '0';
+        switchTab('file');
         els.pinResultSection.style.display = 'none';
         selectMethod(null);
     }
@@ -504,10 +663,6 @@ const PinUpload = (function() {
         updateUploadButton();
     }
 
-    /**
-     * Get selected TTL from radio buttons
-     * @returns {string} TTL value ("1h", "12h", or "24h")
-     */
     function getSelectedTTL() {
         const radio = document.querySelector('input[name="pin-ttl"]:checked');
         return radio ? radio.value : '24h';
@@ -515,8 +670,6 @@ const PinUpload = (function() {
 
     /**
      * Convert hex string to Uint8Array
-     * @param {string} hex - Hex string (e.g. "aabbcc")
-     * @returns {Uint8Array}
      */
     function hexToUint8Array(hex) {
         const bytes = new Uint8Array(hex.length / 2);
@@ -538,7 +691,6 @@ const PinUpload = (function() {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize on pages that have the method selection
     if (document.getElementById('method-selection')) {
         PinUpload.init();
     }

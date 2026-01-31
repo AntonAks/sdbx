@@ -46,20 +46,25 @@
         <!-- Method Selection Screen -->
         <section id="method-selection" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-8">
             <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6 text-center">How would you like to share?</h2>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-                <button id="method-link" class="flex-1 max-w-xs p-6 bg-white dark:bg-slate-800 rounded-xl border-2 border-gray-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-all text-center cursor-pointer group" tabindex="0" role="button" aria-label="Select Share Link mode">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 justify-center mb-6">
+                <button id="method-pin" class="p-6 bg-white dark:bg-slate-800 rounded-xl border-2 border-gray-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-all text-center cursor-pointer group" tabindex="0" role="button" aria-label="Select PIN Code mode">
+                    <div class="text-3xl mb-3">&#128273;</div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">PIN Code</h3>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm mb-2">Share with 6 digits + PIN</p>
+                    <span class="text-xs text-gray-400 dark:text-slate-500">Easy to type</span>
+                </button>
+                <button id="method-link" class="p-6 bg-white dark:bg-slate-800 rounded-xl border-2 border-gray-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-all text-center cursor-pointer group" tabindex="0" role="button" aria-label="Select Share Link mode">
                     <div class="text-3xl mb-3">&#128279;</div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">Share Link</h3>
                     <p class="text-gray-500 dark:text-slate-400 text-sm mb-2">Copy & paste a secure URL</p>
                     <span class="text-xs text-gray-400 dark:text-slate-500">Works everywhere</span>
                 </button>
-                <button id="method-pin" class="flex-1 max-w-xs p-6 bg-white dark:bg-slate-800 rounded-xl border-2 border-gray-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-all text-center cursor-pointer group" tabindex="0" role="button" aria-label="Select PIN Code mode">
-                    <div class="text-3xl mb-3">&#128241;</div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">PIN Code</h3>
-                    <p class="text-gray-500 dark:text-slate-400 text-sm mb-2">Phone to Computer</p>
-                    <span class="text-xs text-gray-400 dark:text-slate-500">Just 6 digits + PIN</span>
-                    <span id="pin-recommended" class="block mt-2 text-xs text-blue-600 dark:text-blue-400 font-semibold sm:hidden">Recommended for mobile</span>
-                </button>
+                <a href="/download.html" id="method-download" class="p-6 bg-white dark:bg-slate-800 rounded-xl border-2 border-gray-200 dark:border-slate-700 hover:border-green-500 dark:hover:border-green-500 transition-all text-center cursor-pointer group" tabindex="0" role="button" aria-label="Download with PIN code">
+                    <div class="text-3xl mb-3">&#128229;</div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">Download</h3>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm mb-2">Have a code? Get your file</p>
+                    <span class="text-xs text-gray-400 dark:text-slate-500">Enter 6-digit code</span>
+                </a>
             </div>
             <div class="text-center">
                 <button id="method-help-btn" class="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 underline" aria-label="Which method should I use?">Which method should I use?</button>
@@ -94,30 +99,64 @@
 
         <!-- PIN Upload Section -->
         <section id="pin-upload-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-8" style="display: none;">
-            <div class="flex items-center justify-between mb-6">
-                <button id="pin-back-btn" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">&#8592; Back</button>
-                <span class="text-sm text-gray-500 dark:text-slate-400">&#128241; PIN Code Mode</span>
-            </div>
-
-            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6">Share via PIN Code</h2>
-
-            <!-- Drop Zone -->
-            <div id="pin-drop-zone" class="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center cursor-pointer transition-all hover:border-blue-500 hover:bg-gray-100 dark:hover:bg-slate-800/50 mb-6" tabindex="0">
-                <svg class="mx-auto mb-4 w-16 h-16 text-gray-400 dark:text-slate-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19.35 10.04A7.49 7.49 0 0012 4a7.49 7.49 0 00-7.35 6.04A5.994 5.994 0 000 15c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM13 13v4h-2v-4H8l4-5 4 5h-3z"/>
-                </svg>
-                <p class="text-gray-700 dark:text-slate-300 mb-2">Drag & drop file here</p>
-                <p class="text-sm text-gray-500 dark:text-slate-500">or click to browse &bull; 500 MB limit</p>
-                <input type="file" id="pin-file-input" accept="*/*" hidden>
-            </div>
-
-            <!-- File Info -->
-            <div id="pin-file-info" class="bg-gray-100 dark:bg-slate-800/50 rounded-lg p-4 mb-6 flex items-center justify-between" style="display: none;">
-                <div>
-                    <span id="pin-file-name" class="text-gray-900 dark:text-slate-100 font-medium"></span>
-                    <span id="pin-file-size" class="text-gray-500 dark:text-slate-400 text-sm ml-2"></span>
+            <!-- File / Text Tab Navigation -->
+            <div class="flex justify-center mb-8">
+                <div class="inline-flex rounded-full bg-gray-200 dark:bg-slate-800 p-1">
+                    <button class="tab-btn active" data-pin-tab="pin-file-tab">
+                        <svg class="inline w-4 h-4 mr-2 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        File
+                    </button>
+                    <button class="tab-btn" data-pin-tab="pin-text-tab">
+                        <svg class="inline w-4 h-4 mr-2 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Text
+                    </button>
                 </div>
-                <button id="pin-file-remove" class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 text-sm" aria-label="Remove file">&times; Remove</button>
+            </div>
+
+            <!-- File Tab -->
+            <div id="pin-file-tab">
+                <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6">Share Files</h2>
+                <!-- Drop Zone -->
+                <div id="pin-drop-zone" class="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center cursor-pointer transition-all hover:border-blue-500 hover:bg-gray-100 dark:hover:bg-slate-800/50 mb-6" tabindex="0">
+                    <svg class="mx-auto mb-4 w-16 h-16 text-gray-400 dark:text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19.35 10.04A7.49 7.49 0 0012 4a7.49 7.49 0 00-7.35 6.04A5.994 5.994 0 000 15c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM13 13v4h-2v-4H8l4-5 4 5h-3z"/>
+                    </svg>
+                    <p class="text-gray-700 dark:text-slate-300 mb-2">Drag & drop files here (max 10)</p>
+                    <p class="text-sm text-gray-500 dark:text-slate-500">or click to browse &bull; 500 MB total limit</p>
+                    <input type="file" id="pin-file-input" accept="*/*" multiple hidden>
+                </div>
+
+                <!-- File Info (single file) -->
+                <div id="pin-file-info" class="bg-gray-100 dark:bg-slate-800/50 rounded-lg p-4 mb-6 flex items-center justify-between" style="display: none;">
+                    <div>
+                        <span id="pin-file-name" class="text-gray-900 dark:text-slate-100 font-medium"></span>
+                        <span id="pin-file-size" class="text-gray-500 dark:text-slate-400 text-sm ml-2"></span>
+                    </div>
+                    <button id="pin-file-remove" class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 text-sm" aria-label="Remove file">&times; Remove</button>
+                </div>
+
+                <!-- File List (multiple files) -->
+                <div id="pin-file-list" class="bg-gray-100 dark:bg-slate-800/50 rounded-lg p-4 mb-6" style="display: none;">
+                    <div class="flex items-center justify-between mb-2">
+                        <span id="pin-file-count" class="text-gray-900 dark:text-slate-100 font-medium"></span>
+                        <button id="pin-files-clear" class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 text-sm">&times; Clear all</button>
+                    </div>
+                    <ul id="pin-file-list-items" class="text-sm text-gray-600 dark:text-slate-400 space-y-1 max-h-32 overflow-y-auto"></ul>
+                </div>
+            </div>
+
+            <!-- Text Tab -->
+            <div id="pin-text-tab" style="display: none;">
+                <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6">Share Text Secret</h2>
+                <!-- Text Input -->
+                <div class="mb-6">
+                    <textarea id="pin-text-input" placeholder="Enter your secret text (max 1000 characters)..." rows="8" maxlength="1000" class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 resize-vertical focus:outline-none focus:border-blue-500 mb-2"></textarea>
+                    <p class="text-gray-600 dark:text-slate-400 text-sm text-right"><span id="pin-text-char-count" class="text-gray-700 dark:text-slate-300">0</span> / 1000 characters</p>
+                </div>
             </div>
 
             <!-- PIN Input -->
@@ -132,7 +171,7 @@
                         autocorrect="off"
                         autocapitalize="off"
                         spellcheck="false"
-                        placeholder="e.g. 7a2B"
+                        placeholder=""
                         aria-describedby="pin-validation-msg"
                         class="w-32 px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 text-center text-lg font-mono tracking-widest focus:outline-none focus:border-blue-500"
                     />
@@ -246,7 +285,7 @@
 
             <!-- File Tab Panel -->
             <div id="file-tab" class="tab-panel active">
-                <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6">Share a File</h2>
+                <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6">Share Files</h2>
 
                 <!-- Drop Zone -->
                 <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center cursor-pointer transition-all hover:border-blue-500 hover:bg-gray-100 dark:hover:bg-slate-800/50 mb-6">

@@ -527,11 +527,20 @@ const PinDownload = (function() {
                     }
                 );
 
-                updateDownloadProgress(95, 'Saving file...');
-                saveFile(decryptedData, 'download');
+                const fileName = data.file_name || 'download';
 
-                updateDownloadProgress(100, 'Download complete!');
-                showPinSuccess();
+                if (fileName === 'secret.txt') {
+                    // Text secret stored as file — display inline
+                    updateDownloadProgress(100, 'Complete!');
+                    const decoder = new TextDecoder();
+                    const decryptedText = decoder.decode(decryptedData);
+                    showPinTextSecret(decryptedText);
+                } else {
+                    updateDownloadProgress(95, 'Saving file...');
+                    saveFile(decryptedData, fileName);
+                    updateDownloadProgress(100, 'Download complete!');
+                    showPinSuccess();
+                }
             }
 
             // Confirm download (fire and forget)

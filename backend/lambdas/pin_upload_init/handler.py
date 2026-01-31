@@ -86,6 +86,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         content_type = body.get("content_type", "file")
         ttl = body.get("ttl")
         pin = body.get("pin")
+        file_name = body.get("file_name", "")
 
         # Validate inputs
         validate_ttl(ttl)
@@ -149,6 +150,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                         salt=salt,
                         content_type="file",
                         s3_key=s3_key,
+                        file_name=file_name,
                     )
 
                     upload_url = generate_upload_url(
