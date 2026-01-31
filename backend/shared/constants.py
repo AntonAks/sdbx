@@ -32,7 +32,17 @@ AUTO_DELETE_THRESHOLD: Final[int] = 3  # Number of reports before auto-delete
 # Access modes
 ACCESS_MODE_ONE_TIME: Final[str] = "one_time"
 ACCESS_MODE_MULTI: Final[str] = "multi"
-ALLOWED_ACCESS_MODES: Final[tuple[str, ...]] = (ACCESS_MODE_ONE_TIME, ACCESS_MODE_MULTI)
+ACCESS_MODE_PIN: Final[str] = "pin"
+ALLOWED_ACCESS_MODES: Final[tuple[str, ...]] = (ACCESS_MODE_ONE_TIME, ACCESS_MODE_MULTI, ACCESS_MODE_PIN)
+
+# PIN-based sharing
+PIN_LENGTH: Final[int] = 4
+PIN_FILE_ID_LENGTH: Final[int] = 6
+PIN_MAX_ATTEMPTS: Final[int] = 3
+PIN_LOCKOUT_SECONDS: Final[int] = 43200  # 12 hours
+PIN_SESSION_TIMEOUT_SECONDS: Final[int] = 60
+PIN_PBKDF2_ITERATIONS: Final[int] = 100000
+PIN_SALT_BYTES: Final[int] = 32
 
 # HTTP Status Codes (for documentation and consistency)
 HTTP_OK: Final[int] = 200
