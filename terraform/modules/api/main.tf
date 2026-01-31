@@ -187,6 +187,34 @@ resource "aws_api_gateway_resource" "stats" {
   path_part   = "stats"
 }
 
+# /pin resource
+resource "aws_api_gateway_resource" "pin" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "pin"
+}
+
+# /pin/upload
+resource "aws_api_gateway_resource" "pin_upload" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.pin.id
+  path_part   = "upload"
+}
+
+# /pin/initiate
+resource "aws_api_gateway_resource" "pin_initiate" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.pin.id
+  path_part   = "initiate"
+}
+
+# /pin/verify
+resource "aws_api_gateway_resource" "pin_verify" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.pin.id
+  path_part   = "verify"
+}
+
 # CORS configuration for all resources
 module "cors_upload_init" {
   source = "./modules/cors"
@@ -228,6 +256,24 @@ module "cors_stats" {
 
   api_id      = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.stats.id
+}
+
+module "cors_pin_upload" {
+  source      = "./modules/cors"
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.pin_upload.id
+}
+
+module "cors_pin_initiate" {
+  source      = "./modules/cors"
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.pin_initiate.id
+}
+
+module "cors_pin_verify" {
+  source      = "./modules/cors"
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.pin_verify.id
 }
 
 # Lambda Functions
@@ -473,6 +519,106 @@ module "lambda_get_stats" {
   tags = var.tags
 }
 
+module "lambda_pin_upload_init" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-pin-upload-init"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/pin_upload_init"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    MAX_FILE_SIZE        = var.max_file_size_bytes
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+  }
+
+  iam_policy_statements = [
+    {
+      effect    = "Allow"
+      actions   = ["s3:PutObject", "s3:PutObjectAcl"]
+      resources = ["${var.bucket_arn}/*"]
+    },
+    {
+      effect    = "Allow"
+      actions   = ["dynamodb:PutItem", "dynamodb:GetItem"]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
+module "lambda_pin_initiate" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-pin-initiate"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/pin_initiate"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+  }
+
+  iam_policy_statements = [
+    {
+      effect    = "Allow"
+      actions   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
+module "lambda_pin_verify" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-pin-verify"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/pin_verify"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+  }
+
+  iam_policy_statements = [
+    {
+      effect    = "Allow"
+      actions   = ["s3:GetObject"]
+      resources = ["${var.bucket_arn}/*"]
+    },
+    {
+      effect    = "Allow"
+      actions   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
 # API Gateway Methods
 # POST /upload/init
 resource "aws_api_gateway_method" "upload_init_post" {
@@ -592,6 +738,57 @@ resource "aws_api_gateway_integration" "stats" {
   uri                     = module.lambda_get_stats.invoke_arn
 }
 
+# POST /pin/upload
+resource "aws_api_gateway_method" "pin_upload_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.pin_upload.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "pin_upload" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.pin_upload.id
+  http_method             = aws_api_gateway_method.pin_upload_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_pin_upload_init.invoke_arn
+}
+
+# POST /pin/initiate
+resource "aws_api_gateway_method" "pin_initiate_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.pin_initiate.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "pin_initiate" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.pin_initiate.id
+  http_method             = aws_api_gateway_method.pin_initiate_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_pin_initiate.invoke_arn
+}
+
+# POST /pin/verify
+resource "aws_api_gateway_method" "pin_verify_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.pin_verify.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "pin_verify" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.pin_verify.id
+  http_method             = aws_api_gateway_method.pin_verify_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_pin_verify.invoke_arn
+}
+
 # Lambda permissions for API Gateway
 resource "aws_lambda_permission" "upload_init" {
   statement_id  = "AllowAPIGatewayInvoke"
@@ -641,6 +838,30 @@ resource "aws_lambda_permission" "stats" {
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "pin_upload" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_pin_upload_init.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "pin_initiate" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_pin_initiate.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "pin_verify" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_pin_verify.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.main.id
@@ -660,8 +881,14 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.report.id,
       aws_api_gateway_method.stats_get.id,
       aws_api_gateway_integration.stats.id,
+      aws_api_gateway_method.pin_upload_post.id,
+      aws_api_gateway_integration.pin_upload.id,
+      aws_api_gateway_method.pin_initiate_post.id,
+      aws_api_gateway_integration.pin_initiate.id,
+      aws_api_gateway_method.pin_verify_post.id,
+      aws_api_gateway_integration.pin_verify.id,
       # Force redeployment - increment this number when needed
-      "v3",
+      "v4",
     ]))
   }
 
@@ -676,6 +903,9 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_integration.confirm,
     aws_api_gateway_integration.report,
     aws_api_gateway_integration.stats,
+    aws_api_gateway_integration.pin_upload,
+    aws_api_gateway_integration.pin_initiate,
+    aws_api_gateway_integration.pin_verify,
   ]
 }
 

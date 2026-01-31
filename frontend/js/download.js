@@ -64,6 +64,14 @@ init();
  */
 async function init() {
     try {
+        // Check for PIN download flow (no hash or non-URL hash)
+        if (typeof PinDownload !== 'undefined' && PinDownload.shouldShowPinFlow()) {
+            elements.loadingSection.style.display = 'none';
+            PinDownload.init();
+            PinDownload.showCodeEntry();
+            return;
+        }
+
         // Parse URL fragment
         const fragment = window.location.hash.slice(1);
         const parts = fragment.split('#');

@@ -22,6 +22,9 @@ LAMBDAS=(
   "confirm_download:confirm-download"
   "cleanup:cleanup"
   "report_abuse:report-abuse"
+  "pin_upload_init:pin-upload-init"
+  "pin_initiate:pin-initiate"
+  "pin_verify:pin-verify"
 )
 
 # Environment (dev or prod)

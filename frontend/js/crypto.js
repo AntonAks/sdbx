@@ -263,7 +263,7 @@ const CryptoModule = (function() {
      * @param {Uint8Array} salt - Random salt (16 bytes)
      * @returns {Promise<CryptoKey>} Derived key for AES-GCM
      */
-    async function deriveKeyFromPassword(password, salt) {
+    async function deriveKeyFromPassword(password, salt, extractable) {
         const encoder = new TextEncoder();
         const keyMaterial = await crypto.subtle.importKey(
             'raw',
@@ -282,7 +282,7 @@ const CryptoModule = (function() {
             },
             keyMaterial,
             { name: 'AES-GCM', length: 256 },
-            false,
+            extractable === true,
             ['encrypt', 'decrypt']
         );
     }

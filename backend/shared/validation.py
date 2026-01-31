@@ -16,6 +16,12 @@ from .exceptions import ValidationError
 # UUID pattern for file ID validation
 UUID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
+# PIN pattern: exactly 4 alphanumeric characters
+PIN_PATTERN = re.compile(r"^[a-zA-Z0-9]{4}$")
+
+# PIN file ID pattern: exactly 6 digits
+PIN_FILE_ID_PATTERN = re.compile(r"^[0-9]{6}$")
+
 
 def validate_file_id(file_id: str) -> None:
     """
@@ -146,3 +152,25 @@ def validate_encrypted_key(encrypted_key: Any) -> None:
     # Should be ~80 chars, allow margin for variations
     if len(encrypted_key) > 200:
         raise ValidationError("Invalid encrypted key format")
+
+
+def validate_pin(pin: Any) -> None:
+    """Validate PIN format (exactly 4 alphanumeric characters)."""
+    if not pin:
+        raise ValidationError("PIN is required")
+    if not isinstance(pin, str):
+        raise ValidationError("PIN must be a string")
+    if len(pin) != 4:
+        raise ValidationError("PIN must be exactly 4 characters")
+    if not PIN_PATTERN.match(pin):
+        raise ValidationError("PIN must contain only letters and numbers")
+
+
+def validate_pin_file_id(file_id: Any) -> None:
+    """Validate 6-digit numeric file ID for PIN-based sharing."""
+    if not file_id:
+        raise ValidationError("File ID is required")
+    if not isinstance(file_id, str):
+        raise ValidationError("File ID must be a string")
+    if not PIN_FILE_ID_PATTERN.match(file_id):
+        raise ValidationError("File ID must be exactly 6 digits")

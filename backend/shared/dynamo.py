@@ -8,12 +8,23 @@ from typing import Any, Optional
 import boto3
 from botocore.exceptions import ClientError
 
-from .constants import ACCESS_MODE_MULTI, ACCESS_MODE_ONE_TIME, DOWNLOAD_RESERVATION_TIMEOUT
+from .constants import (
+    ACCESS_MODE_MULTI,
+    ACCESS_MODE_ONE_TIME,
+    ACCESS_MODE_PIN,
+    DOWNLOAD_RESERVATION_TIMEOUT,
+    PIN_LOCKOUT_SECONDS,
+    PIN_MAX_ATTEMPTS,
+    PIN_SESSION_TIMEOUT_SECONDS,
+)
 from .exceptions import (
     FileAlreadyDownloadedError,
     FileExpiredError,
+    FileLockedException,
     FileNotFoundError,
     FileReservedError,
+    SessionExpiredError,
+    ValidationError,
 )
 
 logger = logging.getLogger(__name__)
@@ -509,3 +520,238 @@ def get_statistics(table_name: str) -> dict[str, Any]:
             "total_bytes": 0,
             "updated_at": datetime.utcnow().isoformat(),
         }
+
+
+def create_pin_file_record(
+    table_name: str,
+    file_id: str,
+    file_size: int,
+    expires_at: int,
+    ip_hash: str,
+    pin_hash: str,
+    salt: str,
+    content_type: str = "file",
+    s3_key: Optional[str] = None,
+    encrypted_text: Optional[str] = None,
+    file_name: Optional[str] = None,
+) -> dict[str, Any]:
+    """
+    Create a DynamoDB record for PIN-based sharing.
+
+    Uses conditional put to prevent file_id collisions.
+
+    Args:
+        table_name: DynamoDB table name
+        file_id: Short file ID (6 chars)
+        file_size: File size in bytes (or encrypted text size)
+        expires_at: Unix timestamp when secret expires
+        ip_hash: SHA256 hash of uploader IP
+        pin_hash: PBKDF2-hashed PIN
+        salt: Base64-encoded salt for PIN hashing
+        content_type: "file" or "text" (default: "file")
+        s3_key: S3 object key (required for files)
+        encrypted_text: Base64 encrypted text (required for text secrets)
+
+    Returns:
+        Created record
+
+    Raises:
+        ValueError: If required fields are missing or file_id already exists
+    """
+    table = get_table(table_name)
+
+    record = {
+        "file_id": file_id,
+        "content_type": content_type,
+        "file_size": file_size,
+        "created_at": datetime.utcnow().isoformat(),
+        "expires_at": expires_at,
+        "downloaded": False,
+        "ip_hash": ip_hash,
+        "report_count": 0,
+        "access_mode": ACCESS_MODE_PIN,
+        "pin_hash": pin_hash,
+        "salt": salt,
+        "attempts_left": PIN_MAX_ATTEMPTS,
+    }
+
+    if file_name:
+        record["file_name"] = file_name
+
+    if content_type == "file":
+        if not s3_key:
+            raise ValueError("s3_key required for file content_type")
+        record["s3_key"] = s3_key
+    elif content_type == "text":
+        if not encrypted_text:
+            raise ValueError("encrypted_text required for text content_type")
+        record["encrypted_text"] = encrypted_text
+
+    try:
+        table.put_item(Item=record, ConditionExpression="attribute_not_exists(file_id)")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise ValueError(f"File ID {file_id} already exists")
+        raise
+
+    logger.info(f"Created PIN {content_type} record: {file_id}")
+    return record
+
+
+def initiate_pin_session(table_name: str, file_id: str) -> dict[str, Any]:
+    """
+    Create a 60-second PIN entry session.
+
+    Checks file exists, not expired, not downloaded, not locked.
+    Resets attempts if lockout has expired.
+
+    Args:
+        table_name: DynamoDB table name
+        file_id: File ID
+
+    Returns:
+        Session info with session_expires and attempts_left
+
+    Raises:
+        FileNotFoundError: If file doesn't exist or is not PIN mode
+        FileAlreadyDownloadedError: If file was already downloaded
+        FileExpiredError: If file has expired
+        FileLockedException: If file is locked due to failed attempts
+    """
+    table = get_table(table_name)
+    current_time = int(time.time())
+    session_expires = current_time + PIN_SESSION_TIMEOUT_SECONDS
+
+    record = get_file_record(table_name, file_id)
+    if not record:
+        raise FileNotFoundError("File not found")
+    if record.get("downloaded"):
+        raise FileAlreadyDownloadedError("File has already been downloaded")
+    if record.get("expires_at", 0) <= current_time:
+        raise FileExpiredError("File has expired")
+    if record.get("access_mode") != ACCESS_MODE_PIN:
+        raise FileNotFoundError("File not found")
+
+    locked_until = record.get("locked_until")
+    if locked_until is not None and int(locked_until) > current_time:
+        remaining_seconds = int(locked_until) - current_time
+        remaining_hours = remaining_seconds // 3600 + (1 if remaining_seconds % 3600 else 0)
+        raise FileLockedException(f"File is locked. Try again in {remaining_hours} hours")
+
+    attempts_left = int(record.get("attempts_left", PIN_MAX_ATTEMPTS))
+
+    update_expr = "SET session_started = :started, session_expires = :expires"
+    expr_values: dict[str, Any] = {":started": current_time, ":expires": session_expires}
+
+    # Reset attempts if lockout has expired
+    if locked_until is not None and int(locked_until) <= current_time:
+        update_expr += ", attempts_left = :max_attempts REMOVE locked_until"
+        expr_values[":max_attempts"] = PIN_MAX_ATTEMPTS
+        attempts_left = PIN_MAX_ATTEMPTS
+
+    try:
+        table.update_item(
+            Key={"file_id": file_id},
+            UpdateExpression=update_expr,
+            ExpressionAttributeValues=expr_values,
+        )
+    except ClientError as e:
+        logger.error(f"Error creating PIN session for {file_id}: {e}")
+        raise
+
+    logger.info(f"PIN session created for: {file_id}, expires: {session_expires}")
+    return {"session_expires": session_expires, "attempts_left": attempts_left}
+
+
+def verify_pin_and_download(table_name: str, file_id: str, pin: str) -> dict[str, Any]:
+    """
+    Verify PIN and reserve file for download.
+
+    Decrements attempts on failure, locks after 3 failures, reserves file on success.
+
+    Args:
+        table_name: DynamoDB table name
+        file_id: File ID
+        pin: User-provided PIN to verify
+
+    Returns:
+        File record with reservation on success
+
+    Raises:
+        FileNotFoundError: If file doesn't exist or is not PIN mode
+        FileAlreadyDownloadedError: If file was already downloaded
+        FileExpiredError: If file has expired
+        SessionExpiredError: If PIN session has expired
+        FileLockedException: If file is locked due to failed attempts
+        ValidationError: If PIN is incorrect (with remaining attempts)
+    """
+    from .pin_utils import verify_pin_hash
+
+    table = get_table(table_name)
+    current_time = int(time.time())
+
+    record = get_file_record(table_name, file_id)
+    if not record:
+        raise FileNotFoundError("File not found")
+    if record.get("access_mode") != ACCESS_MODE_PIN:
+        raise FileNotFoundError("File not found")
+    if record.get("downloaded"):
+        raise FileAlreadyDownloadedError("File has already been downloaded")
+    if record.get("expires_at", 0) <= current_time:
+        raise FileExpiredError("File has expired")
+
+    session_expires = record.get("session_expires")
+    if not session_expires or int(session_expires) <= current_time:
+        raise SessionExpiredError("Session expired. Please enter file ID again")
+
+    locked_until = record.get("locked_until")
+    if locked_until is not None and int(locked_until) > current_time:
+        remaining_seconds = int(locked_until) - current_time
+        remaining_hours = remaining_seconds // 3600 + (1 if remaining_seconds % 3600 else 0)
+        raise FileLockedException(f"File is locked. Try again in {remaining_hours} hours")
+
+    attempts_left = int(record.get("attempts_left", 0))
+    if attempts_left <= 0:
+        raise FileLockedException("File is locked for 12 hours")
+
+    if not verify_pin_hash(pin, record["salt"], record["pin_hash"]):
+        new_attempts = attempts_left - 1
+        update_expr = "SET attempts_left = :attempts"
+        expr_values: dict[str, Any] = {":attempts": new_attempts}
+
+        if new_attempts <= 0:
+            expr_values[":locked"] = current_time + PIN_LOCKOUT_SECONDS
+            update_expr += ", locked_until = :locked"
+
+        try:
+            table.update_item(
+                Key={"file_id": file_id},
+                UpdateExpression=update_expr,
+                ExpressionAttributeValues=expr_values,
+            )
+        except ClientError as e:
+            logger.error(f"Error updating PIN attempts for {file_id}: {e}")
+
+        if new_attempts <= 0:
+            raise FileLockedException("Incorrect PIN. File locked for 12 hours")
+        raise ValidationError(f"Incorrect PIN. {new_attempts} attempts left")
+
+    # PIN correct - reserve file for download
+    try:
+        response = table.update_item(
+            Key={"file_id": file_id},
+            UpdateExpression="SET reserved_at = :now",
+            ConditionExpression="downloaded = :false AND expires_at > :current",
+            ExpressionAttributeValues={
+                ":false": False,
+                ":now": current_time,
+                ":current": current_time,
+            },
+            ReturnValues="ALL_NEW",
+        )
+        logger.info(f"PIN verified, file reserved: {file_id}")
+        return response["Attributes"]
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise FileAlreadyDownloadedError("File has already been downloaded")
+        raise
