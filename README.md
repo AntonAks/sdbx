@@ -60,7 +60,7 @@
 3. Content is encrypted locally using AES-256-GCM
 4. Encrypted data is uploaded to secure storage (server never sees the key or original filename)
 5. You receive a shareable link with the decryption key in the URL fragment (`#key#filename`)
-6. **The key and filename never leave your browser or reach the server**
+6. **The key never leave your browser or reach the server**
 
 ### Downloading/Viewing
 
