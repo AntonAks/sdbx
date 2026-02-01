@@ -40,6 +40,11 @@ const Header = (function() {
             : 'text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 transition';
         links.push(`<a href="about.html" class="${aboutClass}">About</a>`);
 
+        const faqClass = currentPage === 'faq.html'
+            ? 'text-sm text-blue-600 dark:text-blue-500'
+            : 'text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 transition';
+        links.push(`<a href="faq.html" class="${faqClass}">FAQ</a>`);
+
         return links.join('\n                    ');
     }
 
