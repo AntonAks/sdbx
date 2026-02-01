@@ -87,6 +87,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         ttl = body.get("ttl")
         pin = body.get("pin")
         file_name = body.get("file_name", "")
+        access_mode = body.get("access_mode", "one_time")
 
         # Validate inputs
         validate_ttl(ttl)
@@ -125,6 +126,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                         salt=salt,
                         content_type="text",
                         encrypted_text=encrypted_text,
+                        one_time=(access_mode == "one_time"),
                     )
 
                     logger.info(f"PIN text created: file_id={candidate_id}, ttl={ttl}")
@@ -151,6 +153,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                         content_type="file",
                         s3_key=s3_key,
                         file_name=file_name,
+                        one_time=(access_mode == "one_time"),
                     )
 
                     upload_url = generate_upload_url(

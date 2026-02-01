@@ -128,6 +128,10 @@ const PinUpload = (function() {
         // Text input
         els.pinTextInput.addEventListener('input', handleTextInput);
 
+        // One-time toggle
+        els.pinOneTimeToggle = document.getElementById('pin-one-time-toggle');
+        els.pinOneTimeToggle.addEventListener('click', toggleOneTime);
+
         // PIN input
         els.pinInput.addEventListener('input', handlePinInput);
 
@@ -405,12 +409,14 @@ const PinUpload = (function() {
 
             // Step 2: Call PIN upload API
             showProgress(15, 'Initializing upload...');
+            const accessMode = getSelectedAccessMode();
             const initResponse = await callPinUploadApi({
                 content_type: 'file',
                 file_size: fileToUpload.size,
                 file_name: fileName,
                 pin: pin,
                 ttl: ttl,
+                access_mode: accessMode,
                 recaptcha_token: recaptchaToken,
             });
 
@@ -476,12 +482,14 @@ const PinUpload = (function() {
             showProgress(20, 'Initializing...');
             const textBlob = new Blob([new TextEncoder().encode(text)], { type: 'text/plain' });
 
+            const accessMode = getSelectedAccessMode();
             const initResponse = await callPinUploadApi({
                 content_type: 'file',
                 file_size: textBlob.size,
                 file_name: 'secret.txt',
                 pin: pin,
                 ttl: ttl,
+                access_mode: accessMode,
                 recaptcha_token: recaptchaToken,
             });
 
@@ -666,6 +674,31 @@ const PinUpload = (function() {
     function getSelectedTTL() {
         const radio = document.querySelector('input[name="pin-ttl"]:checked');
         return radio ? radio.value : '24h';
+    }
+
+    function toggleOneTime() {
+        const btn = els.pinOneTimeToggle;
+        const isOn = btn.getAttribute('aria-checked') === 'true';
+        const newState = !isOn;
+        btn.setAttribute('aria-checked', String(newState));
+
+        // Toggle visual state
+        const thumb = btn.querySelector('span');
+        if (newState) {
+            btn.classList.remove('bg-gray-300', 'dark:bg-slate-600');
+            btn.classList.add('bg-blue-600');
+            thumb.classList.remove('translate-x-0');
+            thumb.classList.add('translate-x-5');
+        } else {
+            btn.classList.remove('bg-blue-600');
+            btn.classList.add('bg-gray-300', 'dark:bg-slate-600');
+            thumb.classList.remove('translate-x-5');
+            thumb.classList.add('translate-x-0');
+        }
+    }
+
+    function getSelectedAccessMode() {
+        return els.pinOneTimeToggle.getAttribute('aria-checked') === 'true' ? 'one_time' : 'multi';
     }
 
     /**

@@ -534,6 +534,7 @@ def create_pin_file_record(
     s3_key: Optional[str] = None,
     encrypted_text: Optional[str] = None,
     file_name: Optional[str] = None,
+    one_time: bool = True,
 ) -> dict[str, Any]:
     """
     Create a DynamoDB record for PIN-based sharing.
@@ -551,6 +552,7 @@ def create_pin_file_record(
         content_type: "file" or "text" (default: "file")
         s3_key: S3 object key (required for files)
         encrypted_text: Base64 encrypted text (required for text secrets)
+        one_time: If True, delete after first download (default: True)
 
     Returns:
         Created record
@@ -573,6 +575,7 @@ def create_pin_file_record(
         "pin_hash": pin_hash,
         "salt": salt,
         "attempts_left": PIN_MAX_ATTEMPTS,
+        "one_time": one_time,
     }
 
     if file_name:
@@ -737,21 +740,41 @@ def verify_pin_and_download(table_name: str, file_id: str, pin: str) -> dict[str
         raise ValidationError(f"Incorrect PIN. {new_attempts} attempts left")
 
     # PIN correct - reserve file for download
+    is_one_time = record.get("one_time", True)
     try:
-        response = table.update_item(
-            Key={"file_id": file_id},
-            UpdateExpression="SET reserved_at = :now",
-            ConditionExpression="downloaded = :false AND expires_at > :current",
-            ExpressionAttributeValues={
-                ":false": False,
-                ":now": current_time,
-                ":current": current_time,
-            },
-            ReturnValues="ALL_NEW",
-        )
-        logger.info(f"PIN verified, file reserved: {file_id}")
+        if is_one_time:
+            # One-time mode: atomically mark as downloaded
+            response = table.update_item(
+                Key={"file_id": file_id},
+                UpdateExpression="SET reserved_at = :now, downloaded = :true, downloaded_at = :now_iso",
+                ConditionExpression="downloaded = :false AND expires_at > :current",
+                ExpressionAttributeValues={
+                    ":false": False,
+                    ":true": True,
+                    ":now": current_time,
+                    ":now_iso": datetime.utcnow().isoformat(),
+                    ":current": current_time,
+                },
+                ReturnValues="ALL_NEW",
+            )
+        else:
+            # Multi mode: allow repeated downloads until expiry
+            response = table.update_item(
+                Key={"file_id": file_id},
+                UpdateExpression="SET reserved_at = :now ADD download_count :inc",
+                ConditionExpression="expires_at > :current",
+                ExpressionAttributeValues={
+                    ":now": current_time,
+                    ":current": current_time,
+                    ":inc": 1,
+                },
+                ReturnValues="ALL_NEW",
+            )
+        logger.info(f"PIN verified, file reserved: {file_id} (one_time={is_one_time})")
         return response["Attributes"]
     except ClientError as e:
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            raise FileAlreadyDownloadedError("File has already been downloaded")
+            if is_one_time:
+                raise FileAlreadyDownloadedError("File has already been downloaded")
+            raise FileExpiredError("File has expired")
         raise
