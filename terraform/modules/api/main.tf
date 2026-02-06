@@ -51,7 +51,7 @@ resource "aws_api_gateway_model" "upload_request" {
       recaptcha_token = {
         type      = "string"
         minLength = 10
-        maxLength = 2000
+        maxLength = 4000
       }
     }
     required = ["ttl", "recaptcha_token"]
@@ -71,7 +71,7 @@ resource "aws_api_gateway_model" "download_request" {
       recaptcha_token = {
         type      = "string"
         minLength = 10
-        maxLength = 2000
+        maxLength = 4000
       }
     }
     required = ["recaptcha_token"]
@@ -96,7 +96,7 @@ resource "aws_api_gateway_model" "report_abuse_request" {
       recaptcha_token = {
         type      = "string"
         minLength = 10
-        maxLength = 2000
+        maxLength = 4000
       }
     }
     required = ["recaptcha_token"]
@@ -662,15 +662,11 @@ resource "aws_api_gateway_integration" "metadata" {
 
 # POST /files/{file_id}/download
 resource "aws_api_gateway_method" "download_post" {
-  rest_api_id          = aws_api_gateway_rest_api.main.id
-  resource_id          = aws_api_gateway_resource.download.id
-  http_method          = "POST"
-  authorization        = "NONE"
-  request_validator_id = aws_api_gateway_request_validator.main.id
-
-  request_models = {
-    "application/json" = aws_api_gateway_model.download_request.name
-  }
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.download.id
+  http_method   = "POST"
+  authorization = "NONE"
+  # Validation handled in Lambda via @require_cloudfront_and_recaptcha
 }
 
 resource "aws_api_gateway_integration" "download" {
@@ -701,15 +697,11 @@ resource "aws_api_gateway_integration" "confirm" {
 
 # POST /files/{file_id}/report
 resource "aws_api_gateway_method" "report_post" {
-  rest_api_id          = aws_api_gateway_rest_api.main.id
-  resource_id          = aws_api_gateway_resource.report.id
-  http_method          = "POST"
-  authorization        = "NONE"
-  request_validator_id = aws_api_gateway_request_validator.main.id
-
-  request_models = {
-    "application/json" = aws_api_gateway_model.report_abuse_request.name
-  }
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.report.id
+  http_method   = "POST"
+  authorization = "NONE"
+  # Validation handled in Lambda via @require_cloudfront_and_recaptcha
 }
 
 resource "aws_api_gateway_integration" "report" {
@@ -888,7 +880,7 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_method.pin_verify_post.id,
       aws_api_gateway_integration.pin_verify.id,
       # Force redeployment - increment this number when needed
-      "v4",
+      "v6",
     ]))
   }
 

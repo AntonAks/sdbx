@@ -150,12 +150,17 @@ const Utils = (function() {
             throw new Error('reCAPTCHA not configured');
         }
 
-        try {
-            return await grecaptcha.execute(siteKey, { action: action });
-        } catch (error) {
-            console.error('reCAPTCHA error:', error);
-            throw new Error('Failed to verify reCAPTCHA. Please refresh and try again.');
-        }
+        return new Promise((resolve, reject) => {
+            grecaptcha.ready(async () => {
+                try {
+                    const token = await grecaptcha.execute(siteKey, { action: action });
+                    resolve(token);
+                } catch (error) {
+                    console.error('reCAPTCHA error:', error);
+                    reject(new Error('Failed to verify reCAPTCHA. Please refresh and try again.'));
+                }
+            });
+        });
     }
 
     return {
