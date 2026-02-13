@@ -1,6 +1,5 @@
 """Lambda function: Initialize PIN-based file upload."""
 
-import hashlib
 import logging
 import os
 import time
@@ -17,7 +16,7 @@ from shared.pin_utils import generate_pin_file_id, generate_salt, hash_pin
 from shared.request_helpers import get_source_ip, parse_json_body
 from shared.response import error_response, success_response
 from shared.s3 import generate_upload_url
-from shared.security import require_cloudfront_and_recaptcha
+from shared.security import hash_ip_secure, require_cloudfront_and_recaptcha
 from shared.validation import validate_file_size, validate_pin, validate_ttl
 
 logger = logging.getLogger(__name__)
@@ -103,7 +102,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         # Hash IP address (privacy)
         source_ip = get_source_ip(event)
-        ip_hash = hashlib.sha256(source_ip.encode()).hexdigest()
+        ip_hash = hash_ip_secure(source_ip)
 
         # Retry loop for 6-digit ID collisions
         for attempt in range(MAX_ID_RETRIES):

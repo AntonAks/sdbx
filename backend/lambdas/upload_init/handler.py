@@ -1,6 +1,5 @@
 """Lambda function: Initialize file upload."""
 
-import hashlib
 import logging
 import os
 import time
@@ -18,7 +17,7 @@ from shared.exceptions import ValidationError
 from shared.request_helpers import get_source_ip, parse_json_body
 from shared.response import error_response, success_response
 from shared.s3 import generate_upload_url
-from shared.security import require_cloudfront_and_recaptcha
+from shared.security import hash_ip_secure, require_cloudfront_and_recaptcha
 from shared.validation import (
     validate_access_mode,
     validate_encrypted_key,
@@ -133,7 +132,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         # Hash IP address (privacy)
         source_ip = get_source_ip(event)
-        ip_hash = hashlib.sha256(source_ip.encode()).hexdigest()
+        ip_hash = hash_ip_secure(source_ip)
 
         # Handle based on content type
         if content_type == "text":
