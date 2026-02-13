@@ -1,11 +1,14 @@
 """Security helpers for request verification."""
 
+import hashlib
+import hmac
 import json
 import logging
 import os
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Any, Callable, Optional
 
+import boto3
 import requests
 
 logger = logging.getLogger(__name__)
@@ -203,3 +206,66 @@ def require_cloudfront_only(handler: Callable) -> Callable:
         return handler(event, context)
 
     return wrapper
+
+
+# Module-level cache for IP hash salt
+_ip_hash_salt_cache = None
+
+
+@lru_cache(maxsize=1)
+def _get_ssm_parameter(param_name: str) -> str:
+    """
+    Retrieve a parameter from AWS Systems Manager Parameter Store.
+
+    Uses LRU cache so only one API call per Lambda lifetime.
+
+    Args:
+        param_name: Full parameter name (e.g., /sdbx/dev/ip-hash-salt)
+
+    Returns:
+        Parameter value string
+    """
+    ssm_client = boto3.client('ssm')
+    response = ssm_client.get_parameter(
+        Name=param_name,
+        WithDecryption=True
+    )
+    return response['Parameter']['Value']
+
+
+def get_ip_hash_salt() -> str:
+    """
+    Get the IP hash salt from Parameter Store.
+
+    Caches the salt in a module-level variable for performance.
+
+    Returns:
+        Salt string for HMAC hashing
+
+    Raises:
+        ValueError: If IP_HASH_SALT_PARAM env var is not set
+    """
+    global _ip_hash_salt_cache
+    if _ip_hash_salt_cache is not None:
+        return _ip_hash_salt_cache
+
+    param_name = os.environ.get('IP_HASH_SALT_PARAM')
+    if not param_name:
+        raise ValueError("IP_HASH_SALT_PARAM environment variable is not set")
+
+    _ip_hash_salt_cache = _get_ssm_parameter(param_name)
+    return _ip_hash_salt_cache
+
+
+def hash_ip_secure(ip: str) -> str:
+    """
+    Hash an IP address using HMAC-SHA256 with a secret salt.
+
+    Args:
+        ip: IP address string to hash
+
+    Returns:
+        64-character hex string (HMAC-SHA256 digest)
+    """
+    salt = get_ip_hash_salt()
+    return hmac.new(salt.encode(), ip.encode(), hashlib.sha256).hexdigest()

@@ -228,3 +228,97 @@ class TestSecurityEdgeCases:
         # This would raise AttributeError if not handled
         with pytest.raises(AttributeError):
             verify_cloudfront_origin(None)
+
+
+from unittest.mock import patch, MagicMock
+from shared.security import hash_ip_secure, get_ip_hash_salt, _get_ssm_parameter
+
+
+class TestIPHashWithParameterStore:
+    """Test HMAC-SHA256 IP hashing with Parameter Store salt."""
+
+    def setup_method(self):
+        """Clear caches between tests."""
+        _get_ssm_parameter.cache_clear()
+        import shared.security
+        shared.security._ip_hash_salt_cache = None
+
+    @patch('shared.security.boto3.client')
+    def test_get_ssm_parameter_success(self, mock_boto_client, monkeypatch):
+        """Should retrieve parameter from SSM."""
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {
+            'Parameter': {'Value': 'test-salt-value'}
+        }
+        mock_boto_client.return_value = mock_ssm
+
+        result = _get_ssm_parameter('/sdbx/dev/ip-hash-salt')
+
+        assert result == 'test-salt-value'
+        mock_ssm.get_parameter.assert_called_once_with(
+            Name='/sdbx/dev/ip-hash-salt',
+            WithDecryption=True
+        )
+
+    @patch('shared.security.boto3.client')
+    def test_get_ssm_parameter_caching(self, mock_boto_client):
+        """Should only call SSM once due to LRU cache."""
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {
+            'Parameter': {'Value': 'cached-salt'}
+        }
+        mock_boto_client.return_value = mock_ssm
+
+        result1 = _get_ssm_parameter('/sdbx/dev/ip-hash-salt')
+        result2 = _get_ssm_parameter('/sdbx/dev/ip-hash-salt')
+
+        assert result1 == result2 == 'cached-salt'
+        assert mock_ssm.get_parameter.call_count == 1
+
+    @patch('shared.security.boto3.client')
+    def test_hash_ip_secure_with_parameter_store(self, mock_boto_client, monkeypatch):
+        """Should produce valid HMAC-SHA256 hash."""
+        monkeypatch.setenv('IP_HASH_SALT_PARAM', '/sdbx/dev/ip-hash-salt')
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {
+            'Parameter': {'Value': 'test-salt'}
+        }
+        mock_boto_client.return_value = mock_ssm
+
+        result = hash_ip_secure('192.168.1.1')
+
+        assert len(result) == 64
+        assert all(c in '0123456789abcdef' for c in result)
+
+    @patch('shared.security.boto3.client')
+    def test_hash_ip_secure_different_ips_different_hashes(self, mock_boto_client, monkeypatch):
+        """Different IPs should produce different hashes."""
+        monkeypatch.setenv('IP_HASH_SALT_PARAM', '/sdbx/dev/ip-hash-salt')
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {
+            'Parameter': {'Value': 'test-salt'}
+        }
+        mock_boto_client.return_value = mock_ssm
+
+        hash1 = hash_ip_secure('192.168.1.1')
+        hash2 = hash_ip_secure('10.0.0.1')
+
+        assert hash1 != hash2
+
+    def test_get_ip_hash_salt_no_param_name(self, monkeypatch):
+        """Should raise error if IP_HASH_SALT_PARAM env var not set."""
+        monkeypatch.delenv('IP_HASH_SALT_PARAM', raising=False)
+
+        with pytest.raises(ValueError, match="IP_HASH_SALT_PARAM"):
+            get_ip_hash_salt()
+
+    @patch('shared.security.boto3.client')
+    def test_hash_ip_secure_parameter_not_found(self, mock_boto_client, monkeypatch):
+        """Should raise error if parameter doesn't exist in SSM."""
+        monkeypatch.setenv('IP_HASH_SALT_PARAM', '/sdbx/dev/ip-hash-salt')
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.side_effect = Exception("ParameterNotFound")
+        mock_boto_client.return_value = mock_ssm
+
+        with pytest.raises(Exception):
+            hash_ip_secure('192.168.1.1')
