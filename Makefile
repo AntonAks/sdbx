@@ -1,4 +1,4 @@
-.PHONY: help bootstrap deploy-dev deploy-prod destroy-dev destroy-prod destroy-all plan-dev plan-prod init-dev init-prod clean test test-backend test-frontend test-backend-cov install-frontend-deps build-frontend dev-frontend
+.PHONY: help bootstrap deploy-dev deploy-prod destroy-dev destroy-prod destroy-all plan-dev plan-prod init-dev init-prod clean test test-backend test-frontend test-backend-cov install-frontend-deps build-frontend dev-frontend init-salt-dev init-salt-prod check-salt-dev check-salt-prod
 
 # Default target
 help: ## Show this help message
@@ -222,3 +222,15 @@ deploy-frontend-prod: build-frontend ## Deploy frontend to prod S3
 		DIST_ID=$$(cd terraform/environments/prod && terraform output -raw cloudfront_distribution_id) && \
 		aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
 		echo "✅ Frontend deployed to prod"
+
+init-salt-dev: ## Initialize IP hash salt for dev environment
+	@./scripts/init-ip-hash-salt.sh sdbx dev
+
+init-salt-prod: ## Initialize IP hash salt for prod environment
+	@./scripts/init-ip-hash-salt.sh sdbx prod
+
+check-salt-dev: ## Check if IP hash salt exists in dev Parameter Store
+	@aws ssm get-parameter --name "/sdbx/dev/ip-hash-salt" --query "Parameter.{Name:Name,Type:Type,LastModified:LastModifiedDate}" --output table 2>/dev/null || echo "Salt not found. Run: make init-salt-dev"
+
+check-salt-prod: ## Check if IP hash salt exists in prod Parameter Store
+	@aws ssm get-parameter --name "/sdbx/prod/ip-hash-salt" --query "Parameter.{Name:Name,Type:Type,LastModified:LastModifiedDate}" --output table 2>/dev/null || echo "Salt not found. Run: make init-salt-prod"
