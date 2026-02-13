@@ -1,3 +1,7 @@
+# Data sources for constructing ARNs
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "main" {
   name        = "${var.project_name}-${var.environment}-api"
@@ -295,6 +299,7 @@ module "lambda_upload_init" {
     MAX_FILE_SIZE        = var.max_file_size_bytes
     CLOUDFRONT_SECRET    = var.cloudfront_secret
     RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+    IP_HASH_SALT_PARAM   = "/${var.project_name}/${var.environment}/ip-hash-salt"
   }
 
   iam_policy_statements = [
@@ -312,6 +317,20 @@ module "lambda_upload_init" {
         "dynamodb:PutItem"
       ]
       resources = [var.table_arn]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "ssm:GetParameter"
+      ]
+      resources = ["arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/ip-hash-salt"]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "kms:Decrypt"
+      ]
+      resources = ["*"]
     }
   ]
 
@@ -537,6 +556,7 @@ module "lambda_pin_upload_init" {
     MAX_FILE_SIZE        = var.max_file_size_bytes
     CLOUDFRONT_SECRET    = var.cloudfront_secret
     RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+    IP_HASH_SALT_PARAM   = "/${var.project_name}/${var.environment}/ip-hash-salt"
   }
 
   iam_policy_statements = [
@@ -549,6 +569,20 @@ module "lambda_pin_upload_init" {
       effect    = "Allow"
       actions   = ["dynamodb:PutItem", "dynamodb:GetItem"]
       resources = [var.table_arn]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "ssm:GetParameter"
+      ]
+      resources = ["arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/ip-hash-salt"]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "kms:Decrypt"
+      ]
+      resources = ["*"]
     }
   ]
 
