@@ -1,0 +1,5 @@
+# Shared dependencies for all Lambda functions
+# Used to build Lambda Layer in Terraform
+
+boto3>=1.34.0
+requests>=2.31.0

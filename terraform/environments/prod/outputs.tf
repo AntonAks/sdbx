@@ -8,6 +8,11 @@ output "cloudfront_domain" {
   value       = module.cdn.cloudfront_domain
 }
 
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for cache invalidation"
+  value       = module.cdn.cloudfront_distribution_id
+}
+
 output "files_bucket_name" {
   description = "S3 bucket name for encrypted files"
   value       = module.storage.files_bucket_name

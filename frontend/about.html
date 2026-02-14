@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - sdbx</title>
+    <meta name="description" content="Learn more about sdbx - zero-knowledge file sharing with privacy in mind">
+    <link rel="stylesheet" href="css/output.css">
+    <script src="js/theme-toggle.js"></script>
+    <script src="js/header.js"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-200">
+    <!-- Header (rendered by js/header.js) -->
+    <header class="bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800"></header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
+        <h1 class="text-4xl font-semibold text-gray-900 dark:text-slate-100 mb-8 text-center">About sdbx</h1>
+
+        <!-- What is sdbx -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">What is sdbx?</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-4">
+                sdbx is a <strong class="text-gray-900 dark:text-slate-100">zero-knowledge file sharing service</strong> designed with privacy as the core principle.
+                Share files and text securely with end-to-end encryption — via URL link, PIN code, or password-protected vault — with no user tracking.
+            </p>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed">
+                Unlike traditional file sharing services, sdbx ensures that your files are encrypted <em class="text-gray-700 dark:text-slate-200">before</em> they
+                leave your device, and the encryption key never reaches our servers. This means we literally cannot
+                access your files, even if we wanted to.
+            </p>
+        </section>
+
+        <!-- Our Mission -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Our Mission</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-4">
+                In an age where privacy is constantly under threat, we believe that sharing files shouldn't require
+                sacrificing your data or trusting a third party with your sensitive information.
+            </p>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-4">
+                sdbx was built to provide a simple, secure way to share files without:
+            </p>
+            <ul class="text-gray-600 dark:text-slate-300 space-y-2 ml-6 list-disc">
+                <li>Creating accounts or providing personal information</li>
+                <li>Trusting us with your encryption keys</li>
+                <li>Worrying about files being stored indefinitely</li>
+                <li>Being tracked or profiled</li>
+            </ul>
+        </section>
+
+        <!-- How It Works -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6">How It Works</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex flex-col items-start">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Client-side Encryption</h3>
+                    </div>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">
+                        Your files are encrypted in your browser using AES-256-GCM before upload.
+                        We never see the unencrypted content.
+                    </p>
+                </div>
+
+                <div class="flex flex-col items-start">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Zero-Knowledge Architecture</h3>
+                    </div>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">
+                        The encryption key and original filename are stored in the URL fragment (#),
+                        which is never sent to our servers. Only you and the recipient have access.
+                    </p>
+                </div>
+
+                <div class="flex flex-col items-start">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">No Tracking</h3>
+                    </div>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">
+                        No user accounts, no cookies, no analytics, no IP logging.
+                        We collect zero personal information.
+                    </p>
+                </div>
+
+                <div class="flex flex-col items-start">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Self-Destructing Files</h3>
+                    </div>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">
+                        In URL mode, each file can only be downloaded once, then it's permanently deleted.
+                        In PIN mode, you can choose between one-time access or keeping content until expiry.
+                        Network failure protection provides a 10-minute retry window.
+                    </p>
+                </div>
+
+                <div class="flex flex-col items-start">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M12 11c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm-6 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm12 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z"/>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">PIN Code Sharing</h3>
+                    </div>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">
+                        Share files or text protected by a 4-8 digit PIN. The server generates a unique salt,
+                        and a key is derived using PBKDF2 (100,000 iterations). No encryption key in the URL.
+                    </p>
+                </div>
+
+                <div class="flex flex-col items-start">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Vault Mode</h3>
+                    </div>
+                    <p class="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">
+                        Password-protected sharing with unlimited access until expiry. Double encryption layer:
+                        content encrypted with a random data key, which is itself encrypted with a password-derived key.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security Features -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Security Features</h2>
+            <ul class="text-gray-600 dark:text-slate-300 space-y-2 ml-6 list-disc">
+                <li><strong class="text-gray-900 dark:text-slate-100">End-to-End Encryption:</strong> AES-256-GCM with 256-bit keys generated in your browser</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">HTTPS Only:</strong> All communication uses TLS 1.2+ encryption</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">Bot Protection:</strong> Google reCAPTCHA v3 prevents automated abuse</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">Two-Phase Download:</strong> Reserve-then-confirm system prevents race conditions and allows retry on network failure</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">Origin Verification:</strong> CloudFront custom headers block direct API access</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">PBKDF2 Key Derivation:</strong> PIN and Vault modes use 100,000 iterations with SHA-256 for key derivation</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">Automatic Cleanup:</strong> Expired files are deleted hourly</li>
+            </ul>
+        </section>
+
+        <!-- Technology Stack -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Technology Stack</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-4">sdbx is built with modern, privacy-focused technologies:</p>
+            <ul class="text-gray-600 dark:text-slate-300 space-y-2 ml-6 list-disc">
+                <li><strong class="text-gray-900 dark:text-slate-100">Frontend:</strong> Vanilla JavaScript, Web Crypto API, Tailwind CSS, Web Workers for large files</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">Backend:</strong> AWS Lambda (Python 3.12), API Gateway</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">Storage:</strong> Amazon S3 (encrypted files), DynamoDB (metadata)</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">CDN:</strong> Amazon CloudFront</li>
+                <li><strong class="text-gray-900 dark:text-slate-100">Infrastructure:</strong> Terraform (Infrastructure as Code)</li>
+            </ul>
+        </section>
+
+        <!-- Limitations -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Limitations</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-4">To ensure optimal performance and security, sdbx has the following limitations:</p>
+            <ul class="text-gray-600 dark:text-slate-300 space-y-2 ml-6 list-disc">
+                <li>Maximum file size: 500 MB</li>
+                <li>Content expires after max 7 days (custom) or 24 hours (preset)</li>
+                <li>URL mode: one-time download only. PIN mode: configurable one-time or keep until expiry. Vault: unlimited access until expiry</li>
+                <li>Maximum text secret size: 1,000 characters</li>
+                <li>Multi-file upload: up to 10 files per bundle</li>
+                <li>Desktop browsers recommended (mobile support available)</li>
+            </ul>
+        </section>
+
+        <!-- Privacy Policy -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Privacy Policy</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-4"><strong class="text-gray-900 dark:text-slate-100">Simple version: We collect nothing.</strong></p>
+            <ul class="text-gray-600 dark:text-slate-300 space-y-2 ml-6 list-disc mb-4">
+                <li>We don't store unencrypted files</li>
+                <li>We don't have access to files</li>
+                <li>We don't have access to your encryption keys</li>
+                <li>We don't log IP addresses for file access (except hashes)</li>
+                <li>We don't use cookies, tracking, or analytics</li>
+                <li>Files are automatically deleted after first download or expiration</li>
+            </ul>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed">
+                The only data we store is: encrypted file blobs (which we cannot decrypt),
+                file size, upload timestamp, expiration time, download reservation status,
+                and IP address hash (SHA-256, for abuse prevention only, not linked to files). That's it.
+            </p>
+        </section>
+
+        <!-- Open Source -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Open Source</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-6">
+                sdbx is open source and available on GitHub. We believe in transparency and
+                invite security researchers to audit our code.
+            </p>
+            <div class="text-center">
+                <a href="https://github.com/antonaks/sdbx" target="_blank" rel="noopener noreferrer" class="btn-outline btn-auto inline-block">
+                    View Source Code on GitHub
+                </a>
+            </div>
+        </section>
+
+        <!-- Disclaimer -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Disclaimer</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-4">
+                This service is provided as-is. While we implement strong encryption and security practices,
+                users are responsible for their own data. Do not use sdbx for illegal content.
+            </p>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed">
+                For sensitive files, we recommend additional security measures like password-protecting
+                archives before upload.
+            </p>
+        </section>
+
+        <!-- Questions -->
+        <section class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8 mb-6 text-center">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Questions?</h2>
+            <p class="text-gray-600 dark:text-slate-300 leading-relaxed mb-6">
+                Have questions, suggestions, or found a security issue?
+            </p>
+            <a href="https://github.com/antonaks/sdbx/issues" target="_blank" rel="noopener noreferrer" class="btn-outline btn-auto inline-block">
+                Report an Issue on GitHub
+            </a>
+        </section>
+
+        <!-- Back to Home -->
+        <div class="text-center mt-8">
+            <a href="index.html" class="btn-primary btn-auto inline-block">← Back to Home</a>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-slate-800 py-8 text-center">
+        <p class="text-gray-500 dark:text-slate-400 text-sm mb-2">&copy; <span id="year"></span> sdbx - Built with privacy in mind</p>
+        <p class="text-sm">
+            <a href="about.html" class="text-blue-500 hover:text-blue-400">About</a>
+            <span class="text-gray-400 dark:text-slate-600 mx-2">|</span>
+            <a href="faq.html" class="text-blue-500 hover:text-blue-400">FAQ</a>
+            <span class="text-gray-400 dark:text-slate-600 mx-2">|</span>
+            <a href="https://github.com/antonaks/sdbx" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-400">Source Code</a>
+        </p>
+    </footer>
+
+    <script src="js/init.js"></script>
+</body>
+</html>

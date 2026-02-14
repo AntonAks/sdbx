@@ -5,6 +5,8 @@
 .terraform/
 .terraform.lock.hcl
 terraform.tfplan
+tfplan
+*.tfplan
 crash.log
 crash.*.log
 override.tf
@@ -76,6 +78,10 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
+
+# Frontend build output
+frontend/css/output.css
 
 # Logs
 logs/
@@ -89,7 +95,13 @@ Thumbs.db
 *.bak
 *.backup
 
+.claude/*
 terraform/modules/api/builds/layer
 
 ARCHITECTURE.md
 DEPLOYMENT.md
+PROD_DEPLOYMENT.md
+ENHANCEMENT_PLAN.md
+DEPLOYMENT_CHECKLIST.md
+
+SALT.md

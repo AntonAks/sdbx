@@ -4,5 +4,5 @@
 environment          = "prod"
 aws_region          = "eu-central-1"
 project_name        = "sdbx"
-max_file_size_bytes = 104857600  # 100 MB
+max_file_size_bytes = 524288000  # 500 MB
 allowed_ttl_hours   = [1, 12, 24]

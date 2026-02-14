@@ -43,3 +43,21 @@ variable "recaptcha_secret_key" {
   type        = string
   sensitive   = true
 }
+
+variable "cloudfront_domain_override" {
+  description = "Override CloudFront domain for CORS (use for manual configuration or testing)"
+  type        = string
+  default     = ""
+}
+
+variable "custom_domain" {
+  description = "Custom domain name for the application (if using Route53/custom domain)"
+  type        = string
+  default     = ""
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN for custom domain (must be in us-east-1)"
+  type        = string
+  default     = ""
+}

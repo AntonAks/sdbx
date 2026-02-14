@@ -1,4 +1,4 @@
-.PHONY: help bootstrap deploy-dev deploy-prod destroy-dev destroy-prod destroy-all plan-dev plan-prod init-dev init-prod clean status
+.PHONY: help bootstrap deploy-dev deploy-prod destroy-dev destroy-prod destroy-all plan-dev plan-prod init-dev init-prod clean test test-backend test-frontend test-backend-cov install-frontend-deps build-frontend dev-frontend init-salt-dev init-salt-prod check-salt-dev check-salt-prod
 
 # Default target
 help: ## Show this help message
@@ -16,10 +16,70 @@ help: ## Show this help message
 bootstrap: ## Bootstrap Terraform backend (run once)
 	@./scripts/bootstrap-terraform-backend.sh
 
-deploy-dev: ## Deploy dev environment
+build-lambdas-dev: ## Build Lambda deployment packages for dev
+	@./scripts/build-lambdas.sh dev
+
+build-lambdas-prod: ## Build Lambda deployment packages for prod
+	@./scripts/build-lambdas.sh prod
+
+install-frontend-deps: ## Install frontend dependencies (Tailwind CSS)
+	@if [ ! -d "node_modules" ]; then \
+		echo "📦 Installing frontend dependencies..."; \
+		npm install; \
+	else \
+		echo "✓ Frontend dependencies already installed"; \
+	fi
+
+build-frontend: install-frontend-deps ## Build frontend CSS with Tailwind
+	@echo "🎨 Building Tailwind CSS..."
+	@npm run build:css
+	@echo "  ✓ CSS built to frontend/css/output.css"
+
+dev-frontend: install-frontend-deps ## Watch mode for frontend development
+	@echo "👀 Watching frontend CSS changes..."
+	@echo "Press Ctrl+C to stop"
+	@npm run dev:css
+
+deploy-dev-infra: build-lambdas-dev ## Deploy dev infrastructure only (without frontend)
 	@./scripts/deploy-dev.sh
 
-deploy-prod: ## Deploy prod environment
+deploy-dev: build-lambdas-dev build-frontend ## Deploy dev environment (backend + frontend)
+	@echo "🚀 Deploying to DEVELOPMENT..."
+	@echo ""
+	@ACCOUNT_ID=$$(aws sts get-caller-identity --query Account --output text) && \
+		BACKEND_BUCKET="sdbx-terraform-state-$$ACCOUNT_ID" && \
+		cd terraform/environments/dev && \
+		cp -n terraform.tfvars.example terraform.tfvars 2>/dev/null || true && \
+		terraform init -backend-config="bucket=$$BACKEND_BUCKET" && \
+		terraform validate && \
+		terraform plan -out=tfplan && \
+		echo "" && \
+		read -p "Apply to DEVELOPMENT? (yes/no): " confirm && \
+		if [ "$$confirm" = "yes" ]; then \
+			terraform apply tfplan && rm -f tfplan && \
+			echo "" && \
+			echo "📦 Deploying frontend..." && \
+			cd ../../.. && \
+			echo "🔧 Patching API paths for dev environment..." && \
+			find frontend/js -name "*.js" -exec sed -i "s|'/prod'|'/dev'|g" {} \; && \
+			find frontend/js -name "*.js" -exec sed -i "s|/prod/|/dev/|g" {} \; && \
+			BUCKET=$$(cd terraform/environments/dev && terraform output -raw static_bucket_name) && \
+			aws s3 sync frontend/ s3://$$BUCKET/ --delete --exclude "tests/*" && \
+			DIST_ID=$$(cd terraform/environments/dev && terraform output -raw cloudfront_distribution_id) && \
+			aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+			echo "🔧 Restoring API paths..." && \
+			find frontend/js -name "*.js" -exec sed -i "s|'/dev'|'/prod'|g" {} \; && \
+			find frontend/js -name "*.js" -exec sed -i "s|/dev/|/prod/|g" {} \; && \
+			echo "" && \
+			echo "✅ Deployment complete!" && \
+			echo "" && \
+			echo "📊 Outputs:" && \
+			cd terraform/environments/dev && terraform output; \
+		else \
+			echo "❌ Aborted" && rm -f tfplan; \
+		fi
+
+deploy-prod: build-lambdas-prod build-frontend ## Deploy prod environment (backend + frontend)
 	@echo "🚀 Deploying to PRODUCTION..."
 	@ACCOUNT_ID=$$(aws sts get-caller-identity --query Account --output text) && \
 		BACKEND_BUCKET="sdbx-terraform-state-$$ACCOUNT_ID" && \
@@ -30,7 +90,15 @@ deploy-prod: ## Deploy prod environment
 		echo "" && \
 		read -p "Apply to PRODUCTION? (yes/no): " confirm && \
 		if [ "$$confirm" = "yes" ]; then \
-			terraform apply tfplan && rm -f tfplan; \
+			terraform apply tfplan && rm -f tfplan && \
+			echo "" && \
+			echo "📦 Deploying frontend..." && \
+			cd ../../.. && \
+			BUCKET=$$(cd terraform/environments/prod && terraform output -raw static_bucket_name) && \
+			aws s3 sync frontend/ s3://$$BUCKET/ --delete --exclude "tests/*" && \
+			DIST_ID=$$(cd terraform/environments/prod && terraform output -raw cloudfront_distribution_id) && \
+			aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+			echo "✅ Deployment complete!"; \
 		else \
 			echo "❌ Aborted" && rm -f tfplan; \
 		fi
@@ -66,39 +134,6 @@ init-prod: ## Initialize Terraform for prod
 		cp -n terraform.tfvars.example terraform.tfvars 2>/dev/null || true && \
 		terraform init -backend-config="bucket=$$BACKEND_BUCKET"
 
-output-dev: ## Show dev environment outputs
-	@cd terraform/environments/dev && \
-		terraform output
-
-output-prod: ## Show prod environment outputs
-	@cd terraform/environments/prod && \
-		terraform output
-
-status: ## Show deployment status
-	@echo "📊 sdbx Deployment Status"
-	@echo ""
-	@echo "AWS Account:"
-	@aws sts get-caller-identity --query 'Account' --output text 2>/dev/null || echo "  ⚠️  Not configured"
-	@echo ""
-	@echo "Terraform Backend:"
-	@aws s3 ls sdbx-terraform-state 2>/dev/null && echo "  ✓ Backend exists" || echo "  ✗ Backend not created (run: make bootstrap)"
-	@echo ""
-	@echo "Dev Environment:"
-	@if [ -f terraform/environments/dev/.terraform/terraform.tfstate ]; then \
-		echo "  ✓ Initialized"; \
-		cd terraform/environments/dev && terraform workspace show 2>/dev/null || true; \
-	else \
-		echo "  ✗ Not initialized (run: make init-dev)"; \
-	fi
-	@echo ""
-	@echo "Prod Environment:"
-	@if [ -f terraform/environments/prod/.terraform/terraform.tfstate ]; then \
-		echo "  ✓ Initialized"; \
-		cd terraform/environments/prod && terraform workspace show 2>/dev/null || true; \
-	else \
-		echo "  ✗ Not initialized (run: make init-prod)"; \
-	fi
-
 validate-dev: ## Validate dev Terraform configuration
 	@cd terraform/environments/dev && \
 		terraform validate
@@ -118,10 +153,39 @@ clean: ## Clean local Terraform files
 	@find terraform/modules/api/modules/lambda/builds -type f -name "*.zip" -delete 2>/dev/null || true
 	@echo "  ✓ Cleaned"
 
-test-backend: ## Test backend Python code
+test: test-backend test-frontend ## Run all tests (backend + frontend)
+
+test-backend: ## Run backend Python tests
+	@echo "🧪 Running backend tests..."
+	@if [ ! -d "backend/venv" ]; then \
+		echo "📦 Creating virtual environment..."; \
+		cd backend && python3 -m venv venv; \
+	fi
 	@cd backend && \
-		pip install -q -r requirements.txt && \
-		pytest tests/ -v
+		. venv/bin/activate && \
+		pip install -q -r requirements-test.txt && \
+		pytest tests/ -v --tb=short
+	@echo ""
+
+test-backend-cov: ## Run backend tests with coverage report
+	@echo "🧪 Running backend tests with coverage..."
+	@if [ ! -d "backend/venv" ]; then \
+		echo "📦 Creating virtual environment..."; \
+		cd backend && python3 -m venv venv; \
+	fi
+	@cd backend && \
+		. venv/bin/activate && \
+		pip install -q -r requirements-test.txt && \
+		pytest tests/ -v --cov=shared --cov-report=term-missing --cov-report=html
+	@echo ""
+	@echo "📊 Coverage report: backend/htmlcov/index.html"
+	@echo ""
+
+test-frontend: ## Run frontend JavaScript tests
+	@echo "🧪 Running frontend tests..."
+	@cd frontend && \
+		node --test tests/*.test.js
+	@echo ""
 
 lint-backend: ## Lint backend Python code
 	@cd backend && \
@@ -137,31 +201,36 @@ install-backend: ## Install backend dependencies
 	@cd backend && \
 		pip install -r requirements.txt
 
-deploy-frontend-dev: ## Deploy frontend to dev S3
+deploy-frontend-dev: build-frontend ## Deploy frontend to dev S3
+	@echo "📦 Deploying frontend to DEV..."
+	@echo "🔧 Patching API paths for dev environment..."
+	@find frontend/js -name "*.js" -exec sed -i "s|'/prod'|'/dev'|g" {} \;
+	@find frontend/js -name "*.js" -exec sed -i "s|/prod/|/dev/|g" {} \;
 	@BUCKET=$$(cd terraform/environments/dev && terraform output -raw static_bucket_name) && \
-		aws s3 sync frontend/ s3://$$BUCKET/ --delete && \
+		aws s3 sync frontend/ s3://$$BUCKET/ --delete --exclude "tests/*" && \
 		DIST_ID=$$(cd terraform/environments/dev && terraform output -raw cloudfront_distribution_id) && \
-		aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*"
+		aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+		echo "🔧 Restoring API paths..." && \
+		find frontend/js -name "*.js" -exec sed -i "s|'/dev'|'/prod'|g" {} \; && \
+		find frontend/js -name "*.js" -exec sed -i "s|/dev/|/prod/|g" {} \; && \
+		echo "✅ Frontend deployed to dev"
 
-deploy-frontend-prod: ## Deploy frontend to prod S3
+deploy-frontend-prod: build-frontend ## Deploy frontend to prod S3
+	@echo "📦 Deploying frontend to PROD..."
 	@BUCKET=$$(cd terraform/environments/prod && terraform output -raw static_bucket_name) && \
-		aws s3 sync frontend/ s3://$$BUCKET/ --delete && \
+		aws s3 sync frontend/ s3://$$BUCKET/ --delete --exclude "tests/*" && \
 		DIST_ID=$$(cd terraform/environments/prod && terraform output -raw cloudfront_distribution_id) && \
-		aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*"
+		aws cloudfront create-invalidation --distribution-id $$DIST_ID --paths "/*" && \
+		echo "✅ Frontend deployed to prod"
 
-logs-dev: ## Show recent Lambda logs from dev
-	@FUNCTIONS=$$(cd terraform/environments/dev && terraform output -json lambda_function_arns | jq -r 'keys[]') && \
-		for func in $$FUNCTIONS; do \
-			echo "📋 Logs for sdbx-dev-$$func:"; \
-			aws logs tail /aws/lambda/sdbx-dev-$$func --since 1h --follow=false 2>/dev/null | head -20 || echo "  No logs"; \
-			echo ""; \
-		done
+init-salt-dev: ## Initialize IP hash salt for dev environment
+	@./scripts/init-ip-hash-salt.sh sdbx dev
 
-costs: ## Estimate monthly costs
-	@echo "💰 Estimated Monthly Costs"
-	@echo ""
-	@echo "Dev Environment:  ~\$$5-10/month"
-	@echo "Prod Environment: ~\$$20-100/month (traffic dependent)"
-	@echo ""
-	@echo "For exact costs, check AWS Cost Explorer:"
-	@echo "https://console.aws.amazon.com/cost-management/home"
+init-salt-prod: ## Initialize IP hash salt for prod environment
+	@./scripts/init-ip-hash-salt.sh sdbx prod
+
+check-salt-dev: ## Check if IP hash salt exists in dev Parameter Store
+	@aws ssm get-parameter --name "/sdbx/dev/ip-hash-salt" --query "Parameter.{Name:Name,Type:Type,LastModified:LastModifiedDate}" --output table 2>/dev/null || echo "Salt not found. Run: make init-salt-dev"
+
+check-salt-prod: ## Check if IP hash salt exists in prod Parameter Store
+	@aws ssm get-parameter --name "/sdbx/prod/ip-hash-salt" --query "Parameter.{Name:Name,Type:Type,LastModified:LastModifiedDate}" --output table 2>/dev/null || echo "Salt not found. Run: make init-salt-prod"

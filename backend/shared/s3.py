@@ -1,15 +1,24 @@
 """S3 helper functions."""
 
 import logging
+import os
 from typing import Optional
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
-# Initialize S3 client
-s3_client = boto3.client("s3")
+# Get AWS region from environment
+AWS_REGION = os.environ.get("AWS_REGION", "eu-central-1")
+
+# Initialize S3 client with signature version for presigned URLs
+s3_client = boto3.client(
+    "s3",
+    region_name=AWS_REGION,
+    config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"})
+)
 
 
 def generate_upload_url(

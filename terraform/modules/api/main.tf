@@ -1,7 +1,11 @@
+# Data sources for constructing ARNs
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "main" {
   name        = "${var.project_name}-${var.environment}-api"
-  description = "SecureDrop API for file sharing"
+  description = "sdbx API for zero-knowledge file sharing"
 
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -10,16 +14,109 @@ resource "aws_api_gateway_rest_api" "main" {
   tags = var.tags
 }
 
+# Request Validator - validates request body and parameters
+resource "aws_api_gateway_request_validator" "main" {
+  rest_api_id                 = aws_api_gateway_rest_api.main.id
+  name                        = "${var.project_name}-${var.environment}-validator"
+  validate_request_body       = true
+  validate_request_parameters = true
+}
+
+# Request Models - JSON schemas for request validation
+
+# Upload Init Request Model (supports both files and text)
+resource "aws_api_gateway_model" "upload_request" {
+  rest_api_id  = aws_api_gateway_rest_api.main.id
+  name         = "UploadInitRequest"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "$schema" = "http://json-schema.org/draft-04/schema#"
+    type      = "object"
+    properties = {
+      content_type = {
+        type = "string"
+        enum = ["file", "text"]
+      }
+      file_size = {
+        type    = "integer"
+        minimum = 1
+        maximum = var.max_file_size_bytes
+      }
+      encrypted_text = {
+        type      = "string"
+        minLength = 1
+        maxLength = 10000
+      }
+      ttl = {
+        type = "string"
+        enum = ["1h", "12h", "24h"]
+      }
+      recaptcha_token = {
+        type      = "string"
+        minLength = 10
+        maxLength = 4000
+      }
+    }
+    required = ["ttl", "recaptcha_token"]
+  })
+}
+
+# Download Request Model
+resource "aws_api_gateway_model" "download_request" {
+  rest_api_id  = aws_api_gateway_rest_api.main.id
+  name         = "DownloadRequest"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "$schema" = "http://json-schema.org/draft-04/schema#"
+    type      = "object"
+    properties = {
+      recaptcha_token = {
+        type      = "string"
+        minLength = 10
+        maxLength = 4000
+      }
+    }
+    required = ["recaptcha_token"]
+  })
+}
+
+# Report Abuse Request Model
+resource "aws_api_gateway_model" "report_abuse_request" {
+  rest_api_id  = aws_api_gateway_rest_api.main.id
+  name         = "ReportAbuseRequest"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "$schema" = "http://json-schema.org/draft-04/schema#"
+    type      = "object"
+    properties = {
+      reason = {
+        type      = "string"
+        minLength = 1
+        maxLength = 500
+      }
+      recaptcha_token = {
+        type      = "string"
+        minLength = 10
+        maxLength = 4000
+      }
+    }
+    required = ["recaptcha_token"]
+  })
+}
+
 # Lambda Layer for shared dependencies
 resource "null_resource" "dependencies_layer_build" {
   triggers = {
-    requirements = filemd5("${path.module}/layer_requirements.txt")
+    requirements = filemd5("${path.module}/../../../backend/lambdas/requirements.txt")
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       mkdir -p ${path.module}/builds/layer/python
-      pip install -q -r ${path.module}/layer_requirements.txt -t ${path.module}/builds/layer/python/
+      pip install -q -r ${path.module}/../../../backend/lambdas/requirements.txt -t ${path.module}/builds/layer/python/
       cd ${path.module}/builds/layer
       zip -r ../dependencies-layer.zip python/ -x "*.pyc" -x "__pycache__/*"
     EOT
@@ -76,10 +173,50 @@ resource "aws_api_gateway_resource" "download" {
   path_part   = "download"
 }
 
+resource "aws_api_gateway_resource" "confirm" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.file.id
+  path_part   = "confirm"
+}
+
 resource "aws_api_gateway_resource" "report" {
   rest_api_id = aws_api_gateway_rest_api.main.id
   parent_id   = aws_api_gateway_resource.file.id
   path_part   = "report"
+}
+
+resource "aws_api_gateway_resource" "stats" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "stats"
+}
+
+# /pin resource
+resource "aws_api_gateway_resource" "pin" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "pin"
+}
+
+# /pin/upload
+resource "aws_api_gateway_resource" "pin_upload" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.pin.id
+  path_part   = "upload"
+}
+
+# /pin/initiate
+resource "aws_api_gateway_resource" "pin_initiate" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.pin.id
+  path_part   = "initiate"
+}
+
+# /pin/verify
+resource "aws_api_gateway_resource" "pin_verify" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.pin.id
+  path_part   = "verify"
 }
 
 # CORS configuration for all resources
@@ -104,11 +241,43 @@ module "cors_download" {
   resource_id = aws_api_gateway_resource.download.id
 }
 
+module "cors_confirm" {
+  source = "./modules/cors"
+
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.confirm.id
+}
+
 module "cors_report" {
   source = "./modules/cors"
 
   api_id      = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.report.id
+}
+
+module "cors_stats" {
+  source = "./modules/cors"
+
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.stats.id
+}
+
+module "cors_pin_upload" {
+  source      = "./modules/cors"
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.pin_upload.id
+}
+
+module "cors_pin_initiate" {
+  source      = "./modules/cors"
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.pin_initiate.id
+}
+
+module "cors_pin_verify" {
+  source      = "./modules/cors"
+  api_id      = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.pin_verify.id
 }
 
 # Lambda Functions
@@ -124,12 +293,13 @@ module "lambda_upload_init" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    BUCKET_NAME           = var.bucket_name
-    TABLE_NAME            = var.table_name
-    ENVIRONMENT           = var.environment
-    MAX_FILE_SIZE         = var.max_file_size_bytes
-    CLOUDFRONT_SECRET     = var.cloudfront_secret
-    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    MAX_FILE_SIZE        = var.max_file_size_bytes
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+    IP_HASH_SALT_PARAM   = "/${var.project_name}/${var.environment}/ip-hash-salt"
   }
 
   iam_policy_statements = [
@@ -147,6 +317,20 @@ module "lambda_upload_init" {
         "dynamodb:PutItem"
       ]
       resources = [var.table_arn]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "ssm:GetParameter"
+      ]
+      resources = ["arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/ip-hash-salt"]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "kms:Decrypt"
+      ]
+      resources = ["*"]
     }
   ]
 
@@ -165,9 +349,9 @@ module "lambda_get_metadata" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    TABLE_NAME         = var.table_name
-    ENVIRONMENT        = var.environment
-    CLOUDFRONT_SECRET  = var.cloudfront_secret
+    TABLE_NAME        = var.table_name
+    ENVIRONMENT       = var.environment
+    CLOUDFRONT_SECRET = var.cloudfront_secret
   }
 
   iam_policy_statements = [
@@ -195,11 +379,11 @@ module "lambda_download" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    BUCKET_NAME           = var.bucket_name
-    TABLE_NAME            = var.table_name
-    ENVIRONMENT           = var.environment
-    CLOUDFRONT_SECRET     = var.cloudfront_secret
-    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [
@@ -210,6 +394,37 @@ module "lambda_download" {
       ]
       resources = ["${var.bucket_arn}/*"]
     },
+    {
+      effect = "Allow"
+      actions = [
+        "dynamodb:UpdateItem",
+        "dynamodb:GetItem"
+      ]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
+module "lambda_confirm_download" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-confirm-download"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/confirm_download"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    TABLE_NAME        = var.table_name
+    ENVIRONMENT       = var.environment
+    CLOUDFRONT_SECRET = var.cloudfront_secret
+  }
+
+  iam_policy_statements = [
     {
       effect = "Allow"
       actions = [
@@ -273,10 +488,10 @@ module "lambda_report_abuse" {
   layers        = [aws_lambda_layer_version.dependencies.arn]
 
   environment_variables = {
-    TABLE_NAME            = var.table_name
-    ENVIRONMENT           = var.environment
-    CLOUDFRONT_SECRET     = var.cloudfront_secret
-    RECAPTCHA_SECRET_KEY  = var.recaptcha_secret_key
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
   }
 
   iam_policy_statements = [
@@ -293,13 +508,164 @@ module "lambda_report_abuse" {
   tags = var.tags
 }
 
+module "lambda_get_stats" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-get-stats"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/get_stats"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    TABLE_NAME        = var.table_name
+    ENVIRONMENT       = var.environment
+    CLOUDFRONT_SECRET = var.cloudfront_secret
+  }
+
+  iam_policy_statements = [
+    {
+      effect = "Allow"
+      actions = [
+        "dynamodb:GetItem"
+      ]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
+module "lambda_pin_upload_init" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-pin-upload-init"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/pin_upload_init"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    MAX_FILE_SIZE        = var.max_file_size_bytes
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+    IP_HASH_SALT_PARAM   = "/${var.project_name}/${var.environment}/ip-hash-salt"
+  }
+
+  iam_policy_statements = [
+    {
+      effect    = "Allow"
+      actions   = ["s3:PutObject", "s3:PutObjectAcl"]
+      resources = ["${var.bucket_arn}/*"]
+    },
+    {
+      effect    = "Allow"
+      actions   = ["dynamodb:PutItem", "dynamodb:GetItem"]
+      resources = [var.table_arn]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "ssm:GetParameter"
+      ]
+      resources = ["arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/ip-hash-salt"]
+    },
+    {
+      effect = "Allow"
+      actions = [
+        "kms:Decrypt"
+      ]
+      resources = ["*"]
+    }
+  ]
+
+  tags = var.tags
+}
+
+module "lambda_pin_initiate" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-pin-initiate"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/pin_initiate"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+  }
+
+  iam_policy_statements = [
+    {
+      effect    = "Allow"
+      actions   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
+module "lambda_pin_verify" {
+  source = "./modules/lambda"
+
+  function_name = "${var.project_name}-${var.environment}-pin-verify"
+  handler       = "handler.handler"
+  runtime       = var.lambda_runtime
+  timeout       = var.lambda_timeout
+  memory_size   = var.lambda_memory_size
+  source_dir    = "${path.root}/../../../backend/lambdas/pin_verify"
+  layers        = [aws_lambda_layer_version.dependencies.arn]
+
+  environment_variables = {
+    BUCKET_NAME          = var.bucket_name
+    TABLE_NAME           = var.table_name
+    ENVIRONMENT          = var.environment
+    CLOUDFRONT_SECRET    = var.cloudfront_secret
+    RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
+  }
+
+  iam_policy_statements = [
+    {
+      effect    = "Allow"
+      actions   = ["s3:GetObject"]
+      resources = ["${var.bucket_arn}/*"]
+    },
+    {
+      effect    = "Allow"
+      actions   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
+      resources = [var.table_arn]
+    }
+  ]
+
+  tags = var.tags
+}
+
 # API Gateway Methods
 # POST /upload/init
 resource "aws_api_gateway_method" "upload_init_post" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.upload_init.id
-  http_method   = "POST"
-  authorization = "NONE"
+  rest_api_id          = aws_api_gateway_rest_api.main.id
+  resource_id          = aws_api_gateway_resource.upload_init.id
+  http_method          = "POST"
+  authorization        = "NONE"
+  # Disable request validation - handled in Lambda
+  # request_validator_id = aws_api_gateway_request_validator.main.id
+
+  # request_models = {
+  #   "application/json" = aws_api_gateway_model.upload_request.name
+  # }
 }
 
 resource "aws_api_gateway_integration" "upload_init" {
@@ -334,6 +700,7 @@ resource "aws_api_gateway_method" "download_post" {
   resource_id   = aws_api_gateway_resource.download.id
   http_method   = "POST"
   authorization = "NONE"
+  # Validation handled in Lambda via @require_cloudfront_and_recaptcha
 }
 
 resource "aws_api_gateway_integration" "download" {
@@ -345,12 +712,30 @@ resource "aws_api_gateway_integration" "download" {
   uri                     = module.lambda_download.invoke_arn
 }
 
+# POST /files/{file_id}/confirm
+resource "aws_api_gateway_method" "confirm_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.confirm.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "confirm" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.confirm.id
+  http_method             = aws_api_gateway_method.confirm_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_confirm_download.invoke_arn
+}
+
 # POST /files/{file_id}/report
 resource "aws_api_gateway_method" "report_post" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   resource_id   = aws_api_gateway_resource.report.id
   http_method   = "POST"
   authorization = "NONE"
+  # Validation handled in Lambda via @require_cloudfront_and_recaptcha
 }
 
 resource "aws_api_gateway_integration" "report" {
@@ -360,6 +745,74 @@ resource "aws_api_gateway_integration" "report" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = module.lambda_report_abuse.invoke_arn
+}
+
+# GET /stats
+resource "aws_api_gateway_method" "stats_get" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.stats.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "stats" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.stats.id
+  http_method             = aws_api_gateway_method.stats_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_get_stats.invoke_arn
+}
+
+# POST /pin/upload
+resource "aws_api_gateway_method" "pin_upload_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.pin_upload.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "pin_upload" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.pin_upload.id
+  http_method             = aws_api_gateway_method.pin_upload_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_pin_upload_init.invoke_arn
+}
+
+# POST /pin/initiate
+resource "aws_api_gateway_method" "pin_initiate_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.pin_initiate.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "pin_initiate" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.pin_initiate.id
+  http_method             = aws_api_gateway_method.pin_initiate_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_pin_initiate.invoke_arn
+}
+
+# POST /pin/verify
+resource "aws_api_gateway_method" "pin_verify_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.pin_verify.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "pin_verify" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.pin_verify.id
+  http_method             = aws_api_gateway_method.pin_verify_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = module.lambda_pin_verify.invoke_arn
 }
 
 # Lambda permissions for API Gateway
@@ -387,10 +840,50 @@ resource "aws_lambda_permission" "download" {
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "confirm_download" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_confirm_download.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
 resource "aws_lambda_permission" "report" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = module.lambda_report_abuse.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "stats" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_get_stats.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "pin_upload" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_pin_upload_init.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "pin_initiate" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_pin_initiate.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "pin_verify" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_pin_verify.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }
@@ -408,8 +901,20 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.metadata.id,
       aws_api_gateway_method.download_post.id,
       aws_api_gateway_integration.download.id,
+      aws_api_gateway_method.confirm_post.id,
+      aws_api_gateway_integration.confirm.id,
       aws_api_gateway_method.report_post.id,
       aws_api_gateway_integration.report.id,
+      aws_api_gateway_method.stats_get.id,
+      aws_api_gateway_integration.stats.id,
+      aws_api_gateway_method.pin_upload_post.id,
+      aws_api_gateway_integration.pin_upload.id,
+      aws_api_gateway_method.pin_initiate_post.id,
+      aws_api_gateway_integration.pin_initiate.id,
+      aws_api_gateway_method.pin_verify_post.id,
+      aws_api_gateway_integration.pin_verify.id,
+      # Force redeployment - increment this number when needed
+      "v6",
     ]))
   }
 
@@ -421,7 +926,12 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_integration.upload_init,
     aws_api_gateway_integration.metadata,
     aws_api_gateway_integration.download,
+    aws_api_gateway_integration.confirm,
     aws_api_gateway_integration.report,
+    aws_api_gateway_integration.stats,
+    aws_api_gateway_integration.pin_upload,
+    aws_api_gateway_integration.pin_initiate,
+    aws_api_gateway_integration.pin_verify,
   ]
 }
 
@@ -447,6 +957,21 @@ resource "aws_api_gateway_stage" "main" {
   }
 
   tags = var.tags
+}
+
+# API Gateway Throttling - prevents abuse and controls costs
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.main.stage_name
+  method_path = "*/*" # Apply to all methods
+
+  settings {
+    throttling_burst_limit = var.environment == "prod" ? 5000 : 1000 # Concurrent requests
+    throttling_rate_limit  = var.environment == "prod" ? 2000 : 500  # Requests per second
+    logging_level          = "INFO"
+    data_trace_enabled     = false
+    metrics_enabled        = true
+  }
 }
 
 # CloudWatch Log Group for API Gateway

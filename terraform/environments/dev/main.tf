@@ -19,6 +19,12 @@ module "storage" {
   project_name = var.project_name
   environment  = var.environment
   tags         = local.common_tags
+
+  # CORS Security: Pass CloudFront domain from CDN module
+  # NOTE: On first apply, cloudfront_domain will be empty (CORS allows nothing)
+  # On second apply, it will be populated with the actual CloudFront domain
+  cloudfront_domain = var.cloudfront_domain_override != "" ? var.cloudfront_domain_override : try(module.cdn.cloudfront_domain, "")
+  custom_domain     = var.custom_domain
 }
 
 # API Module - API Gateway and Lambda functions
@@ -48,6 +54,8 @@ module "cdn" {
   static_bucket_regional_domain_name = module.storage.static_bucket_regional_domain_name
   api_endpoint                       = module.api.api_invoke_url
   cloudfront_secret                  = random_password.cloudfront_secret.result
+  custom_domain                      = var.custom_domain
+  acm_certificate_arn                = var.acm_certificate_arn
   tags                               = local.common_tags
 }
 

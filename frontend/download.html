@@ -5,99 +5,325 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Download File - sdbx</title>
     <meta name="description" content="Download your securely shared file">
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdV7DAsAAAAAI3U_2efIlWrcOuRiUDS4N3SQhQD"></script>
+    <link rel="stylesheet" href="css/output.css">
+    <script src="js/theme-toggle.js"></script>
+    <script src="js/header.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdulTIsAAAAAJdhvyMU6B1og7GE7d5DySrQUQiv"></script>
 </head>
-<body>
-    <header>
-        <h1>🔒 sdbx</h1>
-        <p class="tagline">Secure file download</p>
-    </header>
+<body class="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-200">
+    <!-- Header (rendered by js/header.js) -->
+    <header class="bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800"></header>
 
-    <main>
-        <section id="loading-section" class="card">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Checking file availability...</p>
+    <!-- Main Content -->
+    <main class="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
+        <!-- PIN Code Entry Section -->
+        <section id="pin-code-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6 text-center">Download Your File</h2>
+            <p class="text-gray-600 dark:text-slate-400 text-center mb-6">Enter your 6-digit code:</p>
+
+            <div id="code-input-boxes" class="flex gap-2 sm:gap-3 justify-center mb-6">
+                <input type="text" class="code-digit w-12 h-14 text-center text-2xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 rounded-lg focus:border-blue-500 focus:outline-none text-gray-900 dark:text-slate-100" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="0" aria-label="Digit 1" />
+                <input type="text" class="code-digit w-12 h-14 text-center text-2xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 rounded-lg focus:border-blue-500 focus:outline-none text-gray-900 dark:text-slate-100" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="1" aria-label="Digit 2" />
+                <input type="text" class="code-digit w-12 h-14 text-center text-2xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 rounded-lg focus:border-blue-500 focus:outline-none text-gray-900 dark:text-slate-100" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="2" aria-label="Digit 3" />
+                <input type="text" class="code-digit w-12 h-14 text-center text-2xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 rounded-lg focus:border-blue-500 focus:outline-none text-gray-900 dark:text-slate-100" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="3" aria-label="Digit 4" />
+                <input type="text" class="code-digit w-12 h-14 text-center text-2xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 rounded-lg focus:border-blue-500 focus:outline-none text-gray-900 dark:text-slate-100" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="4" aria-label="Digit 5" />
+                <input type="text" class="code-digit w-12 h-14 text-center text-2xl font-semibold bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 rounded-lg focus:border-blue-500 focus:outline-none text-gray-900 dark:text-slate-100" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="5" aria-label="Digit 6" />
+            </div>
+
+            <button id="code-continue-btn" class="btn-primary" disabled>Continue</button>
+            <div id="code-error" class="mt-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-600 dark:text-red-400 text-sm text-center" style="display: none;" aria-live="polite"></div>
+            <p class="text-gray-400 dark:text-slate-500 text-xs text-center mt-4">The code looks like: 482973</p>
+        </section>
+
+        <!-- PIN Entry Section (with timer) -->
+        <section id="pin-entry-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-gray-600 dark:text-slate-400 text-sm">File: <strong id="pin-file-code" class="text-gray-900 dark:text-slate-100 font-mono"></strong></span>
+            </div>
+
+            <div id="pin-timer" class="text-center py-3 px-4 rounded-lg mb-4 text-lg font-semibold" aria-live="polite" aria-atomic="true">
+                Time remaining: <span id="pin-timer-value">60</span>s
+            </div>
+
+            <div class="text-center mb-4">
+                <span class="text-sm text-gray-500 dark:text-slate-400">Attempts left: <span id="pin-attempts-value" class="font-semibold text-gray-900 dark:text-slate-100">3</span></span>
+            </div>
+
+            <div class="mb-6">
+                <label for="pin-verify-input" class="block text-gray-700 dark:text-slate-300 font-medium mb-2 text-center">Enter your PIN (4 characters):</label>
+                <div class="flex justify-center">
+                    <input type="text" id="pin-verify-input" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                        class="w-40 px-4 py-3 bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 text-center text-2xl font-mono tracking-[0.3em] focus:outline-none focus:border-blue-500"
+                        aria-describedby="pin-verify-error" />
+                </div>
+            </div>
+
+            <button id="pin-download-btn" class="btn-primary" disabled>Download File</button>
+
+            <div id="pin-verify-error" class="mt-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-600 dark:text-red-400 text-sm text-center" style="display: none;" aria-live="polite"></div>
+
+            <p class="text-yellow-600 dark:text-yellow-400 text-xs text-center mt-4">Wrong PIN 3 times = 12 hour lockout</p>
+        </section>
+
+        <!-- PIN Session Timeout Section -->
+        <section id="pin-timeout-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4 mb-6">
+                <h2 class="text-yellow-600 dark:text-yellow-400 font-semibold text-xl mb-2">Session Expired</h2>
+                <p class="text-gray-700 dark:text-slate-300">You didn't enter the PIN within 60 seconds.</p>
+            </div>
+            <p class="text-gray-600 dark:text-slate-400 text-sm mb-6 text-center">Enter your 6-digit code again to start a new session.</p>
+            <button id="pin-try-again-btn" class="btn-primary">Enter Code Again</button>
+        </section>
+
+        <!-- PIN Locked Section -->
+        <section id="pin-locked-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-red-500/10 border border-red-500 rounded-lg p-4 mb-6">
+                <h2 class="text-red-500 font-semibold text-xl mb-2">File Locked</h2>
+                <p class="text-gray-700 dark:text-slate-300">Too many incorrect PIN attempts.</p>
+                <p class="text-gray-600 dark:text-slate-400 text-sm mt-2">This file is locked for 12 hours.</p>
+                <p class="text-gray-600 dark:text-slate-400 text-sm">Try again at: <strong id="pin-unlock-time" class="text-gray-900 dark:text-slate-100"></strong></p>
+            </div>
+            <a href="/" class="btn-primary block text-center">Go to Homepage</a>
+        </section>
+
+        <!-- PIN Download Progress Section -->
+        <section id="pin-download-progress-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4 text-center">Downloading...</h2>
+            <div class="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
+                <div id="pin-dl-progress-fill" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="pin-dl-progress-text" class="text-center text-sm text-gray-500 dark:text-slate-400">Downloading encrypted file...</p>
+        </section>
+
+        <!-- PIN Text Display Section -->
+        <section id="pin-text-display-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-green-500/10 border border-green-500 rounded-lg p-4 mb-6">
+                <h2 class="text-green-500 font-semibold text-xl mb-2">Secret Text</h2>
+                <p class="text-gray-500 dark:text-slate-400 text-sm">This text has been decrypted. The link is now invalid.</p>
+            </div>
+            <div class="mb-6">
+                <textarea id="pin-decrypted-text" readonly rows="10" class="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 font-mono text-sm mb-4 resize-vertical focus:outline-none focus:border-blue-500"></textarea>
+                <button id="pin-copy-text-btn" class="btn-secondary btn-auto">Copy Text</button>
+            </div>
+            <a href="index.html" class="btn-primary block text-center">Share Another Secret</a>
+        </section>
+
+        <!-- PIN Success Section (file downloaded) -->
+        <section id="pin-success-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-green-500/10 border border-green-500 rounded-lg p-4 mb-6">
+                <h2 class="text-green-500 font-semibold text-xl mb-2">Download Complete</h2>
+                <p class="text-gray-700 dark:text-slate-300">Your file has been decrypted and saved.</p>
+                <p class="text-gray-500 dark:text-slate-400 text-sm mt-1">This code is now invalid and the file has been deleted.</p>
+            </div>
+            <a href="index.html" class="btn-primary block text-center">Share Another File</a>
+        </section>
+
+        <!-- Loading Section -->
+        <section id="loading-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-12">
+            <div class="flex flex-col items-center">
+                <div class="w-12 h-12 border-4 border-gray-300 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-600 dark:text-slate-300">Checking file availability...</p>
             </div>
         </section>
 
-        <section id="available-section" class="card" style="display: none;">
-            <h2>File Ready to Download</h2>
+        <!-- Available Section -->
+        <section id="available-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <h2 id="content-title" class="text-2xl font-semibold text-gray-900 dark:text-slate-100 mb-6">Ready to View</h2>
 
-            <div class="file-details">
-                <p><strong>File Size:</strong> <span id="file-size"></span></p>
-                <p><strong>Expires:</strong> <span id="expires-in"></span></p>
+            <div class="bg-gray-100 dark:bg-slate-800/50 rounded-lg p-4 mb-6 space-y-2">
+                <p class="text-gray-600 dark:text-slate-300"><strong id="size-label" class="text-gray-900 dark:text-slate-100">Size:</strong> <span id="file-size" class="text-gray-500 dark:text-slate-400"></span></p>
+                <p class="text-gray-600 dark:text-slate-300"><strong class="text-gray-900 dark:text-slate-100">Expires:</strong> <span id="expires-in" class="text-gray-500 dark:text-slate-400"></span></p>
             </div>
 
-            <div class="warning-box">
-                <p><strong>⚠️ Warning:</strong></p>
-                <ul>
-                    <li>This file can only be downloaded <strong>ONCE</strong></li>
-                    <li>After clicking download, the link becomes invalid forever</li>
+            <div class="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4 mb-6">
+                <p class="text-yellow-500 font-semibold mb-2">⚠️ Warning:</p>
+                <ul class="text-gray-700 dark:text-slate-300 text-sm space-y-1 ml-5 list-disc">
+                    <li id="warning-text">This content can only be viewed <strong class="text-gray-900 dark:text-white">ONCE</strong></li>
+                    <li>After viewing, the link becomes invalid forever</li>
                     <li>Make sure you're ready before proceeding</li>
                 </ul>
             </div>
 
-            <button id="download-btn" class="btn btn-primary">
-                Download Now
+            <button id="download-btn" class="btn-primary mb-6">
+                View Now
             </button>
 
-            <div id="download-progress" style="display: none;">
-                <div class="progress-bar">
-                    <div id="progress-fill" class="progress-fill"></div>
+            <div id="download-progress" style="display: none;" class="mb-6">
+                <div class="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
+                    <div id="progress-fill" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div>
                 </div>
-                <p id="progress-text" class="text-center text-muted"></p>
+                <p id="progress-text" class="text-center text-sm text-gray-500 dark:text-slate-400"></p>
             </div>
 
-            <p class="text-center text-muted">
-                <a href="#" id="report-abuse">Report abuse</a>
+            <p class="text-center">
+                <a href="#" id="report-abuse" class="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 transition">Report abuse</a>
             </p>
         </section>
 
-        <section id="error-section" class="card" style="display: none;">
-            <div class="alert alert-error">
-                <h2>Unable to Download</h2>
-                <p id="error-message"></p>
+        <!-- Vault Password Section -->
+        <section id="vault-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
+                    <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-2">Password Required</h2>
+                <p class="text-gray-600 dark:text-slate-400">Enter the password to access this content</p>
             </div>
 
-            <a href="index.html" class="btn btn-outline">Share a New File</a>
-        </section>
-
-        <section id="success-section" class="card" style="display: none;">
-            <div class="alert alert-success">
-                <h2>✓ Download Complete</h2>
-                <p>Your file has been decrypted and saved.</p>
-                <p class="text-muted">This link is now invalid and the file has been deleted from our servers.</p>
+            <div class="bg-gray-100 dark:bg-slate-800/50 rounded-lg p-4 mb-6 space-y-2">
+                <p class="text-gray-600 dark:text-slate-300"><strong id="vault-size-label" class="text-gray-900 dark:text-slate-100">Size:</strong> <span id="vault-file-size" class="text-gray-500 dark:text-slate-400"></span></p>
+                <p class="text-gray-600 dark:text-slate-300"><strong class="text-gray-900 dark:text-slate-100">Expires:</strong> <span id="vault-expires-in" class="text-gray-500 dark:text-slate-400"></span></p>
+                <p class="text-gray-600 dark:text-slate-300"><strong class="text-gray-900 dark:text-slate-100">Downloads:</strong> <span id="vault-download-count" class="text-gray-500 dark:text-slate-400"></span></p>
             </div>
 
-            <a href="index.html" class="btn btn-primary">Share Another File</a>
+            <div class="mb-6">
+                <div class="flex items-center gap-2">
+                    <input type="password" id="vault-password" placeholder="Enter password"
+                        class="flex-1 px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 focus:outline-none focus:border-blue-500">
+                    <button type="button" id="vault-toggle-password" class="px-3 py-3 text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200 border border-gray-300 dark:border-slate-700 rounded-lg">
+                        Show
+                    </button>
+                </div>
+            </div>
+
+            <button id="vault-download-btn" class="btn-primary mb-4">
+                Unlock & Download
+            </button>
+
+            <div id="vault-progress" style="display: none;" class="mb-6">
+                <div class="h-2 bg-gray-200 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
+                    <div id="vault-progress-fill" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="vault-progress-text" class="text-center text-sm text-gray-500 dark:text-slate-400"></p>
+            </div>
+
+            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p class="text-blue-700 dark:text-blue-300 text-sm text-center">
+                    You can access this multiple times until it expires
+                </p>
+            </div>
         </section>
 
-        <section class="info-section">
-            <h3>About sdbx</h3>
-            <p>
+        <!-- Vault Text Display Section -->
+        <section id="vault-text-display-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-green-500/10 border border-green-500 rounded-lg p-4 mb-6">
+                <h2 class="text-green-500 font-semibold text-xl mb-2">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    Vault Text
+                </h2>
+                <p class="text-gray-500 dark:text-slate-400 text-sm">This password-protected text can be accessed multiple times until it expires.</p>
+            </div>
+
+            <div class="mb-6">
+                <textarea id="vault-decrypted-text" readonly rows="10" class="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 font-mono text-sm mb-4 resize-vertical focus:outline-none focus:border-blue-500"></textarea>
+                <button id="vault-copy-text-btn" class="btn-secondary btn-auto">Copy Text</button>
+            </div>
+
+            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg mb-6">
+                <p class="text-blue-700 dark:text-blue-300 text-sm text-center">
+                    You can access this again with the same link and password
+                </p>
+            </div>
+
+            <a href="index.html" class="btn-primary block">Share Another Secret</a>
+        </section>
+
+        <!-- Vault Success Section (File Downloaded) -->
+        <section id="vault-success-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-green-500/10 border border-green-500 rounded-lg p-4 mb-6">
+                <h2 class="text-green-500 font-semibold text-xl mb-2">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    Download Complete
+                </h2>
+                <p class="text-gray-700 dark:text-slate-300 mb-2">Your file has been decrypted and saved.</p>
+            </div>
+
+            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg mb-6">
+                <p class="text-blue-700 dark:text-blue-300 text-sm text-center">
+                    You can download this file again with the same link and password until it expires
+                </p>
+            </div>
+
+            <a href="index.html" class="btn-primary block">Share Another File</a>
+        </section>
+
+        <!-- Error Section -->
+        <section id="error-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-red-500/10 border border-red-500 rounded-lg p-4 mb-6">
+                <h2 class="text-red-500 font-semibold text-xl mb-2">Unable to Download</h2>
+                <p id="error-message" class="text-gray-700 dark:text-slate-300"></p>
+            </div>
+
+            <a href="index.html" class="btn-outline block">Share a New File</a>
+        </section>
+
+        <!-- Success Section (File Downloaded) -->
+        <section id="success-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-green-500/10 border border-green-500 rounded-lg p-4 mb-6">
+                <h2 class="text-green-500 font-semibold text-xl mb-2">✓ Download Complete</h2>
+                <p class="text-gray-700 dark:text-slate-300 mb-2">Your file has been decrypted and saved.</p>
+                <p class="text-gray-500 dark:text-slate-400 text-sm">This link is now invalid and the file has been deleted from our servers.</p>
+            </div>
+
+            <a href="index.html" class="btn-primary block">Share Another File</a>
+        </section>
+
+        <!-- Text Display Section -->
+        <section id="text-display-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-green-500/10 border border-green-500 rounded-lg p-4 mb-6">
+                <h2 class="text-green-500 font-semibold text-xl mb-2">📝 Secret Text</h2>
+                <p class="text-gray-500 dark:text-slate-400 text-sm">This text has been decrypted and can only be viewed once.</p>
+            </div>
+
+            <div class="mb-6">
+                <textarea id="decrypted-text" readonly rows="10" class="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 font-mono text-sm mb-4 resize-vertical focus:outline-none focus:border-blue-500"></textarea>
+                <button id="copy-text-btn" class="btn-secondary btn-auto">Copy Text</button>
+            </div>
+
+            <div class="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4 mb-6">
+                <p class="text-yellow-500 font-semibold mb-2">⚠️ Important:</p>
+                <ul class="text-gray-700 dark:text-slate-300 text-sm space-y-1 ml-5 list-disc">
+                    <li>This link is now <strong class="text-gray-900 dark:text-white">invalid forever</strong></li>
+                    <li>The text has been deleted from our servers</li>
+                    <li>Save the text now if you need it</li>
+                </ul>
+            </div>
+
+            <a href="index.html" class="btn-primary block">Share Another Secret</a>
+        </section>
+
+        <!-- Info Section -->
+        <section class="mt-12 text-center">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-3">About sdbx</h3>
+            <p class="text-gray-500 dark:text-slate-400 text-sm leading-relaxed max-w-2xl mx-auto">
                 sdbx uses end-to-end encryption to protect your files.
                 Your encryption key never leaves your browser and the server never has access to your unencrypted files.
             </p>
         </section>
     </main>
 
-    <footer>
-        <p>&copy; <span id="year"></span> sdbx - Built with privacy in mind</p>
-        <p>
-            <a href="about.html">About</a> |
-            <a href="privacy.html">Privacy</a> |
-            <a href="https://github.com/yourusername/sdbx">Source Code</a>
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-slate-800 py-8 text-center">
+        <p class="text-gray-500 dark:text-slate-400 text-sm mb-2">&copy; <span id="year"></span> sdbx - Built with privacy in mind</p>
+        <p class="text-sm">
+            <a href="about.html" class="text-blue-500 hover:text-blue-400">About</a>
+            <span class="text-gray-400 dark:text-slate-600 mx-2">|</span>
+            <a href="faq.html" class="text-blue-500 hover:text-blue-400">FAQ</a>
+            <span class="text-gray-400 dark:text-slate-600 mx-2">|</span>
+            <a href="https://github.com/antonaks/sdbx" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-400">Source Code</a>
         </p>
     </footer>
 
     <script src="js/crypto.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/pin-download.js"></script>
     <script src="js/download.js"></script>
-    <script>
-        // Set current year dynamically
-        document.getElementById('year').textContent = new Date().getFullYear();
-    </script>
+    <script src="js/init.js"></script>
 </body>
 </html>

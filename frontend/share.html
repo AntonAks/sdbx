@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Share - sdbx</title>
+    <meta name="description" content="Share your encrypted file or text secret">
+    <link rel="stylesheet" href="css/output.css">
+    <script src="js/theme-toggle.js"></script>
+    <script src="js/header.js"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-200">
+    <!-- Header (rendered by js/header.js) -->
+    <header class="bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800"></header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
+        <!-- Loading Section -->
+        <section id="loading-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-12">
+            <div class="flex flex-col items-center">
+                <div class="w-12 h-12 border-4 border-gray-300 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-600 dark:text-slate-300">Loading share page...</p>
+            </div>
+        </section>
+
+        <!-- Share Section -->
+        <section id="share-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <!-- Success Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 mb-4">
+                    <svg class="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-semibold text-gray-900 dark:text-slate-100">Ready to Share!</h2>
+                <p id="content-type-label" class="text-gray-600 dark:text-slate-400 mt-2">Your file has been encrypted and uploaded.</p>
+            </div>
+
+            <!-- QR Code -->
+            <div class="flex flex-col items-center mb-8">
+                <div id="qr-container" class="bg-white p-4 rounded-lg mb-3">
+                    <!-- QR Code will be generated here -->
+                </div>
+                <p class="text-gray-500 dark:text-slate-400 text-sm">Scan to download</p>
+            </div>
+
+            <!-- QR Action Buttons -->
+            <div class="flex justify-center gap-3 mb-8">
+                <button id="copy-qr-btn" class="btn-secondary btn-auto flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy QR
+                </button>
+                <button id="download-qr-btn" class="btn-secondary btn-auto flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download QR
+                </button>
+            </div>
+
+            <!-- Copy Link Section -->
+            <div class="mb-8">
+                <p class="text-gray-700 dark:text-slate-300 text-sm mb-2">Or copy link:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="share-url" readonly class="flex-1 px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-slate-200 font-mono text-sm focus:outline-none focus:border-blue-500">
+                    <button id="copy-link-btn" class="btn-secondary btn-auto">Copy</button>
+                </div>
+            </div>
+
+            <!-- Upload Another Button -->
+            <div class="text-center mb-8">
+                <a href="index.html" class="btn-outline inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Upload Another
+                </a>
+            </div>
+
+            <!-- Warning Section -->
+            <div class="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4 mb-6">
+                <p class="text-yellow-500 font-semibold mb-2">Warning:</p>
+                <ul class="text-gray-700 dark:text-slate-300 text-sm space-y-1 ml-5 list-disc">
+                    <li>This link works only <strong class="text-gray-900 dark:text-white">ONCE</strong></li>
+                    <li id="delete-warning">File deleted after download or expiry</li>
+                </ul>
+            </div>
+
+            <!-- Expiration Countdown -->
+            <div id="countdown-section" class="text-center">
+                <p class="text-gray-500 dark:text-slate-400 text-sm">
+                    <svg class="w-4 h-4 inline-block mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Expires in: <span id="countdown" class="font-medium text-gray-700 dark:text-slate-300">Loading...</span>
+                </p>
+            </div>
+        </section>
+
+        <!-- Error Section -->
+        <section id="error-section" class="bg-gray-50 dark:bg-slate-900/60 rounded-xl border border-gray-200 dark:border-slate-700 p-8" style="display: none;">
+            <div class="bg-red-500/10 border border-red-500 rounded-lg p-4 mb-6">
+                <h2 class="text-red-500 font-semibold text-xl mb-2">Invalid Share Link</h2>
+                <p id="error-message" class="text-gray-700 dark:text-slate-300">The share link is missing required information.</p>
+            </div>
+
+            <a href="index.html" class="btn-primary block">Go to Upload Page</a>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-slate-800 py-8 text-center">
+        <p class="text-gray-500 dark:text-slate-400 text-sm mb-2">&copy; <span id="year"></span> sdbx - Built with privacy in mind</p>
+        <p class="text-sm">
+            <a href="about.html" class="text-blue-500 hover:text-blue-400">About</a>
+            <span class="text-gray-400 dark:text-slate-600 mx-2">|</span>
+            <a href="faq.html" class="text-blue-500 hover:text-blue-400">FAQ</a>
+            <span class="text-gray-400 dark:text-slate-600 mx-2">|</span>
+            <a href="https://github.com/antonaks/sdbx" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-400">Source Code</a>
+        </p>
+    </footer>
+
+    <script src="js/vendor/qrcode.min.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/share.js"></script>
+    <script src="js/init.js"></script>
+</body>
+</html>

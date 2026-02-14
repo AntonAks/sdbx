@@ -28,6 +28,27 @@ echo "  Backend bucket: ${BACKEND_BUCKET}"
 terraform init -backend-config="bucket=${BACKEND_BUCKET}"
 echo ""
 
+# Check if IP hash salt exists in Parameter Store
+echo "Checking IP hash salt in Parameter Store..."
+PARAM_NAME="/sdbx/dev/ip-hash-salt"
+if aws ssm get-parameter --name "${PARAM_NAME}" --query "Parameter.Name" --output text 2>/dev/null; then
+    echo "  Salt found in Parameter Store"
+else
+    echo ""
+    echo "IP hash salt not found in Parameter Store."
+    echo "This is required for secure IP hashing."
+    echo ""
+    read -p "Initialize salt now? (yes/no): " init_salt
+    if [ "$init_salt" = "yes" ]; then
+        "$(dirname "$0")/init-ip-hash-salt.sh" sdbx dev
+    else
+        echo "Please run: make init-salt-dev"
+        echo "Then re-run this deployment."
+        exit 1
+    fi
+fi
+echo ""
+
 # Validate configuration
 echo "✅ Validating Terraform configuration..."
 terraform validate

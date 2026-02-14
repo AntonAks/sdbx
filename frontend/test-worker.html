@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Worker Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web Worker Crypto Test</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Text Encryption/Decryption</h2>
+        <button id="test-text">Run Text Test</button>
+        <div class="progress-bar">
+            <div class="progress-fill" id="text-progress"></div>
+        </div>
+        <div id="text-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: File Encryption/Decryption</h2>
+        <input type="file" id="file-input" />
+        <button id="test-file" disabled>Run File Test</button>
+        <div class="progress-bar">
+            <div class="progress-fill" id="file-progress"></div>
+        </div>
+        <div id="file-result"></div>
+    </div>
+
+    <script src="/js/crypto.js"></script>
+    <script>
+        'use strict';
+
+        // Test 1: Text encryption/decryption
+        document.getElementById('test-text').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('text-result');
+            const progressBar = document.getElementById('text-progress');
+            const button = document.getElementById('test-text');
+
+            button.disabled = true;
+            resultDiv.innerHTML = '';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+
+            try {
+                // Test data
+                const originalText = 'Hello, Web Worker! This is a test message. 🚀';
+                console.log('Original text:', originalText);
+
+                // Generate key
+                const key = await CryptoModule.generateKey();
+                console.log('Key generated');
+
+                // Create a fake "file" from text
+                const encoder = new TextEncoder();
+                const textData = encoder.encode(originalText);
+                const blob = new Blob([textData]);
+                const file = new File([blob], 'test.txt');
+
+                // Encrypt
+                console.log('Starting encryption...');
+                const encrypted = await CryptoModule.encryptFile(file, key, (progress) => {
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = Math.round(progress) + '%';
+                    console.log('Encrypt progress:', progress);
+                });
+                console.log('Encrypted size:', encrypted.length);
+
+                // Decrypt
+                console.log('Starting decryption...');
+                const decrypted = await CryptoModule.decryptFile(encrypted, key, (progress) => {
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = Math.round(progress) + '%';
+                    console.log('Decrypt progress:', progress);
+                });
+                console.log('Decrypted');
+
+                // Convert back to text
+                const decoder = new TextDecoder();
+                const decryptedText = decoder.decode(decrypted);
+                console.log('Decrypted text:', decryptedText);
+
+                // Verify
+                if (originalText === decryptedText) {
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = `
+                        <strong>✓ Success!</strong><br>
+                        Original: ${originalText}<br>
+                        Encrypted size: ${encrypted.length} bytes<br>
+                        Decrypted: ${decryptedText}
+                    `;
+                } else {
+                    throw new Error('Decrypted text does not match original!');
+                }
+
+            } catch (error) {
+                console.error('Test failed:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ Error: ' + error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        // Test 2: File encryption/decryption
+        const fileInput = document.getElementById('file-input');
+        const fileButton = document.getElementById('test-file');
+
+        fileInput.addEventListener('change', (e) => {
+            fileButton.disabled = !e.target.files.length;
+        });
+
+        fileButton.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const resultDiv = document.getElementById('file-result');
+            const progressBar = document.getElementById('file-progress');
+
+            fileButton.disabled = true;
+            resultDiv.innerHTML = '';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+
+            try {
+                console.log('Testing file:', file.name, file.size, 'bytes');
+
+                // Generate key
+                const key = await CryptoModule.generateKey();
+
+                // Encrypt
+                const startEncrypt = Date.now();
+                const encrypted = await CryptoModule.encryptFile(file, key, (progress) => {
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = Math.round(progress) + '%';
+                });
+                const encryptTime = Date.now() - startEncrypt;
+                console.log('Encryption completed in', encryptTime, 'ms');
+
+                // Decrypt
+                const startDecrypt = Date.now();
+                const decrypted = await CryptoModule.decryptFile(encrypted, key, (progress) => {
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = Math.round(progress) + '%';
+                });
+                const decryptTime = Date.now() - startDecrypt;
+                console.log('Decryption completed in', decryptTime, 'ms');
+
+                // Verify size
+                const originalSize = file.size;
+                const decryptedSize = decrypted.byteLength;
+
+                if (originalSize === decryptedSize) {
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = `
+                        <strong>✓ Success!</strong><br>
+                        File: ${file.name}<br>
+                        Original size: ${originalSize} bytes<br>
+                        Encrypted size: ${encrypted.length} bytes (${((encrypted.length / originalSize) * 100).toFixed(1)}%)<br>
+                        Encryption time: ${encryptTime}ms (${(originalSize / encryptTime / 1024).toFixed(2)} MB/s)<br>
+                        Decryption time: ${decryptTime}ms (${(originalSize / decryptTime / 1024).toFixed(2)} MB/s)
+                    `;
+                } else {
+                    throw new Error(`Size mismatch! Original: ${originalSize}, Decrypted: ${decryptedSize}`);
+                }
+
+            } catch (error) {
+                console.error('Test failed:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ Error: ' + error.message;
+            } finally {
+                fileButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

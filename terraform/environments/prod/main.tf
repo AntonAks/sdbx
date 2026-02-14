@@ -1,9 +1,15 @@
 locals {
   common_tags = {
-    Project     = var.project_name
+    Project     = "sdbx"
     Environment = var.environment
     ManagedBy   = "Terraform"
   }
+}
+
+# Generate CloudFront origin verification secret
+resource "random_password" "cloudfront_secret" {
+  length  = 32
+  special = false
 }
 
 # Storage Module - S3 buckets and DynamoDB table
@@ -13,6 +19,12 @@ module "storage" {
   project_name = var.project_name
   environment  = var.environment
   tags         = local.common_tags
+
+  # CORS Security: Pass CloudFront domain from CDN module
+  # NOTE: On first apply, cloudfront_domain will be empty (CORS allows nothing)
+  # On second apply, it will be populated with the actual CloudFront domain
+  cloudfront_domain = var.cloudfront_domain_override != "" ? var.cloudfront_domain_override : try(module.cdn.cloudfront_domain, "")
+  custom_domain     = var.custom_domain
 }
 
 # API Module - API Gateway and Lambda functions
@@ -26,6 +38,8 @@ module "api" {
   table_name           = module.storage.table_name
   table_arn            = module.storage.table_arn
   max_file_size_bytes  = var.max_file_size_bytes
+  cloudfront_secret    = random_password.cloudfront_secret.result
+  recaptcha_secret_key = var.recaptcha_secret_key
   tags                 = local.common_tags
 }
 
@@ -33,22 +47,26 @@ module "api" {
 module "cdn" {
   source = "../../modules/cdn"
 
-  project_name      = var.project_name
-  environment       = var.environment
-  static_bucket_id  = module.storage.static_bucket_id
-  static_bucket_arn = module.storage.static_bucket_arn
-  api_domain        = module.api.api_invoke_url
-  tags              = local.common_tags
+  project_name                       = var.project_name
+  environment                        = var.environment
+  static_bucket_id                   = module.storage.static_bucket_id
+  static_bucket_arn                  = module.storage.static_bucket_arn
+  static_bucket_regional_domain_name = module.storage.static_bucket_regional_domain_name
+  api_endpoint                       = module.api.api_invoke_url
+  cloudfront_secret                  = random_password.cloudfront_secret.result
+  custom_domain                      = var.custom_domain
+  acm_certificate_arn                = var.acm_certificate_arn
+  tags                               = local.common_tags
 }
 
 # Monitoring Module - CloudWatch logs and alarms
 module "monitoring" {
   source = "../../modules/monitoring"
 
-  project_name      = var.project_name
-  environment       = var.environment
-  lambda_functions  = module.api.lambda_function_names
-  api_id            = module.api.api_id
-  table_name        = module.storage.table_name
-  tags              = local.common_tags
+  project_name     = var.project_name
+  environment      = var.environment
+  lambda_functions = module.api.lambda_function_names
+  api_id           = module.api.api_id
+  table_name       = module.storage.table_name
+  tags             = local.common_tags
 }

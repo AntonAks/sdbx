@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /*
+   * Component classes that preserve existing JavaScript class names
+   * This ensures zero JS changes needed - all existing event listeners work
+   */
+
+  /* Button variants - use !important to override base <a> tag styles */
+  .btn-primary {
+    @apply w-full px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium rounded-lg transition-colors;
+    color: white !important;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600 font-medium rounded-lg transition-colors;
+    color: rgb(17 24 39) !important;
+  }
+  .btn-secondary:is(.dark *) {
+    color: rgb(226 232 240) !important;
+  }
+
+  .btn-outline {
+    @apply px-6 py-3 border-2 border-blue-600 font-medium rounded-lg transition-colors;
+    color: rgb(37 99 235) !important;
+  }
+  .btn-outline:is(.dark *) {
+    color: rgb(59 130 246) !important;
+  }
+  .btn-outline:hover {
+    @apply bg-blue-600;
+    color: white !important;
+  }
+
+  .btn-auto {
+    @apply w-auto;
+  }
+
+  /* Success state for buttons (temporary feedback) */
+  .btn-success {
+    @apply bg-green-500 hover:bg-green-500 border-green-500;
+    color: white !important;
+  }
+  .btn-success:is(.dark *) {
+    color: white !important;
+  }
+
+  /* Tab system - preserves existing tab-switching logic */
+  .tab-btn {
+    @apply px-6 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-slate-400 transition-colors;
+  }
+
+  .tab-btn.active {
+    @apply bg-blue-600 text-white;
+  }
+
+  .tab-btn:not(.active):hover {
+    @apply text-gray-900 dark:text-slate-200;
+  }
+
+  /* Prevent SVG icons inside buttons from capturing click events */
+  .tab-btn svg {
+    pointer-events: none;
+  }
+
+  /* Tab panel visibility */
+  .tab-panel {
+    display: none;
+  }
+
+  .tab-panel.active {
+    display: block;
+  }
+
+  /* File upload drag-over state */
+  .drag-over {
+    @apply border-blue-500 bg-gray-100 dark:bg-slate-800/80;
+  }
+
+  /* Visibility utility - used by JavaScript for toggling sections */
+  .hidden {
+    display: none;
+  }
+}
+
+@layer base {
+  /* Base body styles - override only if not set on body element */
+  /* body {
+    @apply bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-200 antialiased;
+  } */
+
+  /* Default link styles */
+  a {
+    @apply text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors;
+  }
+}

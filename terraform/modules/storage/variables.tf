@@ -31,3 +31,15 @@ variable "lifecycle_expiration_days" {
   type        = number
   default     = 7
 }
+
+variable "custom_domain" {
+  description = "Custom domain name for CORS configuration"
+  type        = string
+  default     = ""
+}
+
+variable "cloudfront_domain" {
+  description = "CloudFront domain name for CORS configuration (leave empty for initial deployment)"
+  type        = string
+  default     = ""
+}

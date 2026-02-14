@@ -1,0 +1,21 @@
+{
+  "name": "sdbx-frontend",
+  "version": "1.0.0",
+  "description": "Zero-knowledge file sharing service - Frontend",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./frontend/css/input.css -o ./frontend/css/output.css --minify",
+    "dev:css": "tailwindcss -i ./frontend/css/input.css -o ./frontend/css/output.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
+  },
+  "keywords": [
+    "encryption",
+    "file-sharing",
+    "zero-knowledge",
+    "privacy"
+  ],
+  "author": "sdbx",
+  "license": "MIT"
+}
