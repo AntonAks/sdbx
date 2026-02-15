@@ -172,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, inject, watch } from 'vue';
 import { useStatsStore } from '../stores/stats.js';
 import { useClipboard } from '../composables/useClipboard.js';
 import MethodSelector from '../components/MethodSelector.vue';
@@ -194,7 +194,16 @@ const showPin = ref(false);
 const domain = computed(() => window.location.host);
 const ttlLabel = computed(() => pinResult.value ? (TTL_LABELS[pinResult.value.ttl] || pinResult.value.ttl) : '');
 
+const homeResetKey = inject('homeResetKey');
+
 onMounted(() => statsStore.load());
+
+watch(homeResetKey, () => {
+    selectedMethod.value = null;
+    pinResult.value = null;
+    showPin.value = false;
+    linkTab.value = 'file';
+});
 
 function selectMethod(method) {
     selectedMethod.value = method;
