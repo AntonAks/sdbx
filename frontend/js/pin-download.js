@@ -27,7 +27,7 @@ const PinDownload = (function() {
      * @returns {boolean}
      */
     function shouldShowPinFlow() {
-        const hash = window.location.hash;
+        const hash = decodeURIComponent(window.location.hash);
         if (!hash || hash === '#') return true;
         const parts = hash.substring(1).split('#');
         // Existing formats have UUID-like first part (contains dashes)

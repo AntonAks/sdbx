@@ -72,8 +72,8 @@ async function init() {
             return;
         }
 
-        // Parse URL fragment
-        const fragment = window.location.hash.slice(1);
+        // Parse URL fragment (decode %23 back to # for URLs shared via platforms that encode them)
+        const fragment = decodeURIComponent(window.location.hash.slice(1));
         const parts = fragment.split('#');
 
         fileId = parts[0];
