@@ -7,7 +7,7 @@
     "switchToDark": "Switch to dark mode"
   },
   "footer": {
-    "copyright": "\u00a9 {year} sdbx - Built with privacy in mind",
+    "copyright": "\u00a9 {year} SecureDBX - Built with privacy in mind",
     "sourceCode": "Source Code"
   },
   "home": {
@@ -64,7 +64,7 @@
       "uploadAnother": "Upload Another File"
     },
     "features": {
-      "heading": "How sdbx Works",
+      "heading": "How SecureDBX Works",
       "encryption": "Client-side Encryption",
       "encryptionDesc": "Your file is encrypted in your browser before upload using AES-256-GCM",
       "zeroKnowledge": "Zero-Knowledge",
@@ -158,8 +158,8 @@
   },
   "download": {
     "info": {
-      "title": "About sdbx",
-      "description": "sdbx uses end-to-end encryption to protect your files. Your encryption key never leaves your browser and the server never has access to your unencrypted files."
+      "title": "About SecureDBX",
+      "description": "SecureDBX uses end-to-end encryption to protect your files. Your encryption key never leaves your browser and the server never has access to your unencrypted files."
     },
     "pin": {
       "title": "Download Your File",
@@ -341,26 +341,26 @@
     "title": "Frequently Asked Questions",
     "general": {
       "heading": "General Questions",
-      "q1": "What is sdbx?",
-      "a1": "sdbx is a zero-knowledge file and text sharing service. It lets you securely share files (up to 500MB) and text secrets with end-to-end encryption. By default, content is accessed once and then permanently deleted. Vault and PIN modes also support multi-access sharing \u2014 content is automatically deleted when the expiration time (TTL) is reached.",
+      "q1": "What is SecureDBX?",
+      "a1": "SecureDBX is a zero-knowledge file and text sharing service. It lets you securely share files (up to 500MB) and text secrets with end-to-end encryption. By default, content is accessed once and then permanently deleted. Vault and PIN modes also support multi-access sharing \u2014 content is automatically deleted when the expiration time (TTL) is reached.",
       "q2": "Do I need to create an account?",
-      "a2": "No! sdbx requires no registration, no email, and no personal information. Simply upload your file or text, get a secure link, and share it. That's it.",
-      "q3": "Is sdbx really free?",
-      "a3": "Yes, sdbx is completely free to use. There are no premium tiers, no ads, and no hidden costs.",
-      "q4": "What can I share with sdbx?",
+      "a2": "No! SecureDBX requires no registration, no email, and no personal information. Simply upload your file or text, get a secure link, and share it. That's it.",
+      "q3": "Is SecureDBX really free?",
+      "a3": "Yes, SecureDBX is completely free to use. There are no premium tiers, no ads, and no hidden costs.",
+      "q4": "What can I share with SecureDBX?",
       "a4html": "Two types of content: <strong class=\"text-gray-900 dark:text-slate-100\">Files</strong> (any file type up to 500MB) and <strong class=\"text-gray-900 dark:text-slate-100\">Text secrets</strong> (up to 1000 characters for passwords, API keys, notes, etc.)."
     },
     "security": {
       "heading": "Security & Privacy",
       "q1": "What does \"zero-knowledge\" mean?",
       "a1": "Zero-knowledge means we cannot access your content, even if we wanted to. Your files are encrypted in your browser before upload, and the encryption key is stored only in the URL fragment (#), which is never sent to our servers.",
-      "q2": "What encryption does sdbx use?",
+      "q2": "What encryption does SecureDBX use?",
       "a2": "AES-256-GCM with 256-bit keys generated randomly in your browser. Each encryption uses a fresh initialization vector. All communications use TLS 1.2+.",
       "q3": "Can you see what I upload?",
       "a3": "No. We cannot see your file contents or text secrets. Everything is encrypted before it leaves your browser. We only see encrypted data, file size, and expiration time. In PIN mode, we also store the filename to deliver it to the recipient, but only temporarily \u2014 for a maximum of TTL time (24 hours). All stored data is automatically deleted after the first download or when the expiration time (TTL) is reached.",
       "q4": "Do you log IP addresses or track users?",
       "a4": "No tracking whatsoever. We store only a SHA-256 hash of your IP address for abuse prevention \u2014 the original IP cannot be recovered from the hash. We don't use cookies, don't run analytics, and don't track users in any way.",
-      "q5": "Is sdbx open source?",
+      "q5": "Is SecureDBX open source?",
       "a5html": "Yes! Fully open source and available on <a href=\"https://github.com/antonaks/sdbx\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-500 hover:text-blue-400 underline\">GitHub</a>. Security researchers are welcome to audit our code."
     },
     "howItWorks": {
@@ -368,7 +368,7 @@
       "q1": "Why can files only be downloaded once by default?",
       "a1": "One-time access is the default security model for URL link sharing. Once the recipient downloads the file, it's permanently deleted from our servers. However, Vault mode and PIN mode offer multi-access sharing \u2014 content stays available and is automatically deleted when the expiration time (TTL) is reached.",
       "q2": "What happens if my download fails due to network issues?",
-      "a2": "sdbx uses a two-phase download system: when you click download, the file is reserved for 10 minutes. If your connection drops, you can retry with the same link within that window. After successful download, the file is permanently deleted.",
+      "a2": "SecureDBX uses a two-phase download system: when you click download, the file is reserved for 10 minutes. If your connection drops, you can retry with the same link within that window. After successful download, the file is permanently deleted.",
       "q3": "How long do files stay available?",
       "a3": "You choose when you upload: 1 hour, 12 hours, or 24 hours. After this time, files are automatically deleted, even if not downloaded.",
       "q4": "What's the difference between file sharing and text secrets?",
@@ -391,12 +391,12 @@
     },
     "useCases": {
       "heading": "Use Cases",
-      "goodTitle": "What is sdbx perfect for?",
+      "goodTitle": "What is SecureDBX perfect for?",
       "good1": "Sharing passwords, API keys, or credentials securely",
       "good2": "Sending confidential documents that shouldn't linger",
       "good3": "Quick secure transfers without creating accounts",
       "good4": "Situations requiring proof that content can only be accessed once",
-      "badTitle": "What is sdbx NOT suitable for?",
+      "badTitle": "What is SecureDBX NOT suitable for?",
       "bad1": "Long-term file storage (max 7 days expiration)",
       "bad2": "Large files",
       "bad3": "Illegal content"
@@ -409,16 +409,16 @@
     "backToHome": "\u2190 Back to Home"
   },
   "about": {
-    "title": "About sdbx",
+    "title": "About SecureDBX",
     "whatIs": {
-      "heading": "What is sdbx?",
-      "p1html": "sdbx is a <strong class=\"text-gray-900 dark:text-slate-100\">zero-knowledge file sharing service</strong> designed with privacy as the core principle. Share files and text securely with end-to-end encryption \u2014 via URL link, PIN code, or password-protected vault \u2014 with no user tracking.",
-      "p2html": "Unlike traditional file sharing services, sdbx ensures that your files are encrypted <em class=\"text-gray-700 dark:text-slate-200\">before</em> they leave your device, and the encryption key never reaches our servers. This means we literally cannot access your files, even if we wanted to."
+      "heading": "What is SecureDBX?",
+      "p1html": "SecureDBX is a <strong class=\"text-gray-900 dark:text-slate-100\">zero-knowledge file sharing service</strong> designed with privacy as the core principle. Share files and text securely with end-to-end encryption \u2014 via URL link, PIN code, or password-protected vault \u2014 with no user tracking.",
+      "p2html": "Unlike traditional file sharing services, SecureDBX ensures that your files are encrypted <em class=\"text-gray-700 dark:text-slate-200\">before</em> they leave your device, and the encryption key never reaches our servers. This means we literally cannot access your files, even if we wanted to."
     },
     "mission": {
       "heading": "Our Mission",
       "p1": "In an age where privacy is constantly under threat, we believe that sharing files shouldn't require sacrificing your data or trusting a third party with your sensitive information.",
-      "p2": "sdbx was built to provide a simple, secure way to share files without:",
+      "p2": "SecureDBX was built to provide a simple, secure way to share files without:",
       "item1": "Creating accounts or providing personal information",
       "item2": "Trusting us with your encryption keys",
       "item3": "Worrying about files being stored indefinitely",
@@ -458,7 +458,7 @@
     },
     "techStack": {
       "heading": "Technology Stack",
-      "intro": "sdbx is built with modern, privacy-focused technologies:",
+      "intro": "SecureDBX is built with modern, privacy-focused technologies:",
       "frontend": "Frontend:",
       "frontendDesc": "Vue 3, Web Crypto API, Tailwind CSS, Web Workers for large files",
       "backend": "Backend:",
@@ -472,7 +472,7 @@
     },
     "limitations": {
       "heading": "Limitations",
-      "intro": "To ensure optimal performance and security, sdbx has the following limitations:",
+      "intro": "To ensure optimal performance and security, SecureDBX has the following limitations:",
       "maxSize": "Maximum file size: 500 MB",
       "expiry": "Content expires after max 7 days (custom) or 24 hours (preset)",
       "accessModes": "URL mode: one-time download only. PIN mode: configurable one-time or keep until expiry. Vault: unlimited access until expiry",
@@ -493,12 +493,12 @@
     },
     "openSource": {
       "heading": "Open Source",
-      "description": "sdbx is open source and available on GitHub. We believe in transparency and invite security researchers to audit our code.",
+      "description": "SecureDBX is open source and available on GitHub. We believe in transparency and invite security researchers to audit our code.",
       "viewSource": "View Source Code on GitHub"
     },
     "disclaimer": {
       "heading": "Disclaimer",
-      "p1": "This service is provided as-is. While we implement strong encryption and security practices, users are responsible for their own data. Do not use sdbx for illegal content.",
+      "p1": "This service is provided as-is. While we implement strong encryption and security practices, users are responsible for their own data. Do not use SecureDBX for illegal content.",
       "p2": "For sensitive files, we recommend additional security measures like password-protecting archives before upload."
     },
     "questions": {
@@ -510,6 +510,6 @@
   },
   "language": {
     "en": "English",
-    "uk": "Українська"
+    "uk": "Солов'їна"
   }
 }

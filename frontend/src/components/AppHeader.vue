@@ -2,8 +2,8 @@
   <header class="bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
     <div class="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
       <a @click.prevent="goHome" href="/" class="flex items-center gap-3 cursor-pointer">
-        <img src="/img/logo.png" alt="sdbx logo" class="w-14 h-14">
-        <span class="text-xl font-semibold text-gray-900 dark:text-slate-100">sdbx</span>
+        <img src="/img/logo.png" alt="SecureDBX logo" class="w-14 h-14">
+        <span class="text-xl font-semibold text-gray-900 dark:text-slate-100">SecureDBX</span>
       </a>
       <nav class="flex items-center gap-6">
         <router-link
@@ -36,7 +36,7 @@
             @click="switchLocale('uk')"
             :class="['text-xl leading-none transition-opacity', locale === 'uk' ? 'opacity-100' : 'opacity-30 hover:opacity-60']"
             :aria-label="$t('language.uk')"
-            title="Українська"
+            title="Солов'їна"
           >🇺🇦</button>
         </div>
 

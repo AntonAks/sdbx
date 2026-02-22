@@ -100,8 +100,8 @@ describe('uk.json - key parity with en.json', () => {
     });
 
     it('has pre-filled language keys', () => {
-        expect(uk.language.en).toBe('English');
-        expect(uk.language.uk).toBe('Українська');
+        expect(uk.language.en).toBe("English");
+        expect(uk.language.uk).toBe("Солов'їна");
     });
 
     it('uk.json values are all strings (empty or filled)', () => {
