@@ -1,4 +1,4 @@
-# sdbx
+# SecureDBX
 
 > Zero-knowledge file and text sharing service with end-to-end encryption and one-time access
 
