@@ -383,7 +383,7 @@ make test-backend-cov
 - We don't have access to your encryption keys
 - We don't log IP addresses for file access
 - We don't use cookies, tracking, or analytics
-- Files are automatically deleted after first download or expiration
+- Files are automatically deleted after the first download or expiration
 
 ### What We Store
 
@@ -399,7 +399,7 @@ The only data we store is:
 
 ## Roadmap
 
-Planned features for sdbx:
+Planned features for securedbx:
 
 - ✅ **Multiple Files / Zip Bundle** - Upload multiple files as encrypted bundle
 - ✅ **Custom Expiration Times** - Precise expiration (5 min - 7 days) with real-time preview
